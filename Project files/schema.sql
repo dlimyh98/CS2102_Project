@@ -21,8 +21,8 @@ CREATE TABLE Updates (
 	date DATE DEFAULT '1001-01-01',
 	new_cap INTEGER NOT NULL 
 		CHECK (new_cap >= 0),
-	room INTEGER NOT NULL,
-	floor INTEGER NOT NULL,
-	PRIMARY KEY (date),
+	room INTEGER,
+	floor INTEGER,
+	PRIMARY KEY (date, room, floor),
 	FOREIGN KEY (room, floor) REFERENCES meetingRooms (room, floor)
 );
