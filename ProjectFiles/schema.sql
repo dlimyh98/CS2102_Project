@@ -3,18 +3,12 @@ CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 CREATE TABLE Employees (
     eid BIGSERIAL,
     ename TEXT NOT NULL,
-    email TEXT DEFAULT uuid_generate_v4(),
+    mobilePhoneContact NUMERIC(8) NOT NULL UNIQUE,
+    homePhoneContact NUMERIC(8),
+    officePhoneContact NUMERIC(8),
+    email TEXT UNIQUE,
     resignedDate DATE DEFAULT '1001-01-01',
     PRIMARY KEY (eid)
-);
-
-CREATE TABLE employeeContacts (
-    eid INTEGER,
-    mobilePhoneContact TEXT NOT NULL UNIQUE,
-    homePhoneContact TEXT UNIQUE,
-    officePhoneContact TEXT UNIQUE,
-    PRIMARY KEY (eid),
-    FOREIGN KEY (eid) REFERENCES Employees (eid)
 );
 
 CREATE TABLE Junior (
@@ -28,7 +22,6 @@ CREATE TABLE Booker (
     PRIMARY KEY (bookerID),
     FOREIGN KEY (bookerID) REFERENCES Employees (eid) ON DELETE CASCADE
 );
-
 CREATE TABLE Senior (
     seniorID INTEGER,
     PRIMARY KEY (seniorID),
