@@ -2,11 +2,17 @@ CREATE TABLE Employees (
     eid INTEGER,
     ename TEXT NOT NULL,
     email TEXT UNIQUE NOT NULL,
-    homePhoneContact TEXT NOT NULL,
-    mobilePhoneContact TEXT NOT NULL,
-    officePhoneContact TEXT NOT NULL,
     resignedDate DATE DEFAULT '1001-01-01',
     PRIMARY KEY (eid)
+);
+
+CREATE TABLE employeeContacts (
+    eid INTEGER,
+    mobilePhoneContact TEXT NOT NULL UNIQUE,
+    homePhoneContact TEXT UNIQUE,
+    officePhoneContact TEXT UNIQUE,
+    PRIMARY KEY (eid),
+    FOREIGN KEY (eid) REFERENCES Employees (eid)
 );
 
 CREATE TABLE Junior (
