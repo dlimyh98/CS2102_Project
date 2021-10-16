@@ -1,7 +1,7 @@
 CREATE TABLE Employees (
     eid INTEGER,
     ename TEXT NOT NULL,
-    email TEXT UNIQUE,
+    email TEXT UNIQUE NOT NULL,
     homePhoneContact TEXT NOT NULL,
     mobilePhoneContact TEXT NOT NULL,
     officePhoneContact TEXT NOT NULL,
