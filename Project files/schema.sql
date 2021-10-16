@@ -105,7 +105,8 @@ CREATE TABLE Joins (
     FOREIGN KEY (room) REFERENCES Sessions (room) ON DELETE CASCADE,
     FOREIGN KEY (floor) REFERENCES Sessions (floor) ON DELETE CASCADE,
     FOREIGN KEY (date) REFERENCES Sessions (date) ON DELETE CASCADE,
-    FOREIGN KEY (time) REFERENCES Sessions (time) ON DELETE CASCADE,
+    FOREIGN KEY (time) REFERENCES Sessions (time) ON DELETE CASCADE
+);
 
 CREATE TABLE meetingRooms (
 	room INTEGER,
