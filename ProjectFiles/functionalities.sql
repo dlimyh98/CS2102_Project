@@ -16,3 +16,25 @@ BEGIN
     INSERT INTO worksIn VALUES (new_employee_id, e_did);
 END;
 $$ LANGUAGE plpgsql;
+
+CREATE OR REPLACE PROCEDURE add_department
+(IN did INT, IN dname TEXT)
+AS $$
+
+BEGIN
+    INSERT INTO Departments VALUES (did, dname);
+END;
+    
+$$ LANGUAGE plpgsql;
+
+CREATE OR REPLACE PROCEDURE add_room
+(IN room INT, IN floor INT, IN rname TEXT, IN room_capacity INT, IN did INT)
+AS $$
+
+BEGIN
+    INSERT INTO meetingRooms VALUES (room, floor, rname);
+    INSERT INTO locatedIn VALUES (room, floor, did);
+    INSERT INTO Updates VALUES (CURRENT_DATE, room_capacity, room, floor);
+END;
+
+$$ LANGUAGE plpgsql;

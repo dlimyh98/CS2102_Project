@@ -69,7 +69,7 @@ CREATE TABLE locatedIn (
 	floor INTEGER,
 	did INTEGER NOT NULL,
 	PRIMARY KEY (room, floor),
-	FOREIGN KEY (room, floor) REFERENCES meetingRooms (room, floor),
+	FOREIGN KEY (room, floor) REFERENCES meetingRooms (room, floor) ON DELETE CASCADE,
 	FOREIGN KEY (did) REFERENCES Departments (did)
 );
 
@@ -80,14 +80,14 @@ CREATE TABLE Updates (
 	room INTEGER,
 	floor INTEGER,
 	PRIMARY KEY (date, room, floor),
-	FOREIGN KEY (room, floor) REFERENCES meetingRooms (room, floor)
+	FOREIGN KEY (room, floor) REFERENCES meetingRooms (room, floor) ON DELETE CASCADE
 );
 
 CREATE TABLE Sessions (
     room INTEGER,
     floor INTEGER,
     date DATE,
-    time TIME WITHOUT TIME ZONE, /* Not sure what data type to use */
+    time INTEGER CHECK (time>=0 AND time<24),
     PRIMARY KEY (room, floor, date, time),
     FOREIGN KEY (room, floor) REFERENCES meetingRooms (room,floor) ON DELETE CASCADE
 );
@@ -97,7 +97,7 @@ CREATE TABLE Approves (
     room INTEGER,
     floor INTEGER,
     date DATE,
-    time TIME WITHOUT TIME ZONE,
+    time INTEGER CHECK (time>=0 AND time<24),
     PRIMARY KEY (room, floor, date, time),
     FOREIGN KEY (managerID) REFERENCES Manager (managerID),
     FOREIGN KEY (room, floor, date, time) REFERENCES Sessions (room, floor, date, time) ON DELETE CASCADE
@@ -108,7 +108,7 @@ CREATE TABLE Books (
     room INTEGER,
     floor INTEGER,
     date DATE,
-    time TIME WITHOUT TIME ZONE,
+    time INTEGER CHECK (time>=0 AND time<24),
     PRIMARY KEY (room, floor, date, time),
     FOREIGN KEY (bookerID) REFERENCES Booker (bookerID) ON DELETE CASCADE,
     FOREIGN KEY (room, floor, date, time) REFERENCES Sessions (room, floor, date, time) ON DELETE CASCADE
@@ -119,7 +119,7 @@ CREATE TABLE Joins (
     room INTEGER,
     floor INTEGER,
     date DATE,
-    time TIME WITHOUT TIME ZONE,
+    time INTEGER CHECK (time>=0 AND time<24),
     PRIMARY KEY (eid, room, floor, date, time),
     FOREIGN KEY (eid) REFERENCES Employees (eid) ON DELETE CASCADE,
     FOREIGN KEY (room, floor, date, time) REFERENCES Sessions (room, floor, date, time) ON DELETE CASCADE
