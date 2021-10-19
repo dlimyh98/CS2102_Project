@@ -8,6 +8,7 @@ CREATE TABLE Employees (
     officePhoneContact NUMERIC(8),
     email TEXT UNIQUE,
     resignedDate DATE DEFAULT '1001-01-01',
+    isResigned BOOLEAN DEFAULT FALSE,
     PRIMARY KEY (eid)
 );
 
@@ -109,6 +110,7 @@ CREATE TABLE Books (
     floor INTEGER,
     date DATE,
     time INTEGER CHECK (time>=0 AND time<24),
+    isApproved BOOLEAN DEFAULT FALSE,
     PRIMARY KEY (room, floor, date, time),
     FOREIGN KEY (bookerID) REFERENCES Booker (bookerID) ON DELETE CASCADE,
     FOREIGN KEY (room, floor, date, time) REFERENCES Sessions (room, floor, date, time) ON DELETE CASCADE
