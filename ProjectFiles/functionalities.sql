@@ -38,3 +38,14 @@ BEGIN
 END;
 
 $$ LANGUAGE plpgsql;
+
+CREATE OR REPLACE PROCEDURE remove_employee
+(IN eid_input INTEGER, IN resignedDate_input DATE)
+AS $$
+BEGIN
+    -- Dont actually delete anything, simply change isResigned field to TRUE and record resignedDate
+    UPDATE Employees
+    SET resignedDate = resignedDate_input, isResigned = TRUE
+    WHERE eid = eid_input;
+END;
+$$ LANGUAGE plpgsql;
