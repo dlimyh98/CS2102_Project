@@ -17,6 +17,7 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
+
 CREATE OR REPLACE PROCEDURE add_department
 (IN did INT, IN dname TEXT)
 AS $$
@@ -24,7 +25,6 @@ AS $$
 BEGIN
     INSERT INTO Departments VALUES (did, dname);
 END;
-    
 $$ LANGUAGE plpgsql;
 
 CREATE OR REPLACE PROCEDURE add_room
@@ -36,8 +36,8 @@ BEGIN
     INSERT INTO locatedIn VALUES (room, floor, did);
     INSERT INTO Updates VALUES (CURRENT_DATE, room_capacity, room, floor);
 END;
-
 $$ LANGUAGE plpgsql;
+
 
 CREATE OR REPLACE PROCEDURE remove_employee
 (IN eid_input INTEGER, IN resignedDate_input DATE)
@@ -49,6 +49,50 @@ BEGIN
     WHERE eid = eid_input;
 END;
 $$ LANGUAGE plpgsql;
+
+
+CREATE OR REPLACE PROCEDURE book_room
+(IN floorNumber INT, IN roomNumber INT, IN requestedDate DATE, IN startHour INT, IN endHour INT, IN employeeID INT)
+AS $$
+DECLARE startHourTracker INT := startHour;
+DECLARE doesEmployeeHaveFever BOOLEAN;
+DECLARE employeeBookerQuery INTEGER;
+DECLARE sessionsInserted INTEGER;
+BEGIN
+    doesEmployeeHaveFever := (
+        SELECT fever
+        FROM healthDeclaration
+        WHERE (healthDeclaration.eid = employeeID)
+    );
+
+    employeeBookerQuery := (
+        SELECT COUNT(*)
+        FROM Booker 
+        WHERE (bookerID = employeeID)
+    );
+
+    IF doesEmployeeHaveFever = TRUE
+        THEN RAISE EXCEPTION 'Employee has fever, not allowed to perform a booking.';
+        RETURN;
+
+    ELSIF employeeBookerQuery <> 1
+        THEN RAISE EXCEPTION 'Employee type is not authorized to perform a booking.';
+        RETURN;
+    END IF;
+
+    WHILE startHourTracker < endHour LOOP
+        INSERT INTO Sessions VALUES (roomNumber, floornumber, requestedDate, startHourTracker);
+        GET DIAGNOSTICS sessionsInserted := ROW_COUNT;
+
+        IF sessionsInserted = 1
+            THEN INSERT INTO Books VALUES (employeeID, roomNumber, floorNumber, requestedDate, startHourTracker, 0);
+                 INSERT INTO Joins VALUES (employeeID, roomNumber, floorNumber, requestedDate, startHourTracker);
+        END IF;
+        startHourTracker := startHourTracker + 1;
+    END LOOP;
+END;
+$$ LANGUAGE plpgsql;
+
 
 CREATE OR REPLACE PROCEDURE remove_department
 (IN did_input INTEGER)
