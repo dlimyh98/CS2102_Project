@@ -75,8 +75,9 @@ CREATE TABLE locatedIn (
 );
 
 CREATE TABLE Updates (
+    managerID INTEGER, /* Should have NOT NULL constraint but clashes add_room function */
 	date DATE DEFAULT '1001-01-01',
-	new_cap INTEGER NOT NULL 
+	newCap INTEGER NOT NULL 
 		CHECK (new_cap >= 0),
 	room INTEGER,
 	floor INTEGER,
