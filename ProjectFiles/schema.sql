@@ -110,7 +110,7 @@ CREATE TABLE Books (
     floor INTEGER,
     date DATE,
     time INTEGER CHECK (time>=0 AND time<24),
-    isApproved BOOLEAN DEFAULT FALSE,
+    approveStatus INTEGER DEFAULT 0 CHECK (approveStatus >= 0 AND approveStatus <= 2),
     PRIMARY KEY (room, floor, date, time),
     FOREIGN KEY (bookerID) REFERENCES Booker (bookerID) ON DELETE CASCADE,
     FOREIGN KEY (room, floor, date, time) REFERENCES Sessions (room, floor, date, time) ON DELETE CASCADE
