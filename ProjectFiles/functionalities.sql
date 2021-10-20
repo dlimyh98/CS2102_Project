@@ -92,3 +92,13 @@ BEGIN
     END LOOP;
 END;
 $$ LANGUAGE plpgsql;
+
+
+CREATE OR REPLACE PROCEDURE remove_department
+(IN did_input INTEGER)
+AS $$
+BEGIN
+    DELETE FROM Departments
+    WHERE did = did_input;
+END;
+$$ LANGUAGE plpgsql
