@@ -19,22 +19,20 @@ $$ LANGUAGE plpgsql;
 
 
 CREATE OR REPLACE PROCEDURE add_department
-(IN did INT, IN dname TEXT)
+(IN did_input INT, IN dname_input TEXT)
 AS $$
-
 BEGIN
-    INSERT INTO Departments VALUES (did, dname);
+    INSERT INTO Departments VALUES (did_input, dname_input);
 END;
 $$ LANGUAGE plpgsql;
 
 CREATE OR REPLACE PROCEDURE add_room
-(IN floor INT, IN room INT, IN rname TEXT, IN room_capacity INT, IN did INT)
+(IN room_input INT, IN floor_input INT, IN rname_input TEXT, IN roomCapacity_input INT, IN did_input INT)
 AS $$
-
 BEGIN
-    INSERT INTO meetingRooms VALUES (room, floor, rname);
-    INSERT INTO locatedIn VALUES (room, floor, did);
-    INSERT INTO Updates VALUES (CURRENT_DATE, room_capacity, room, floor);
+    INSERT INTO meetingRooms VALUES (room_input, floor_input, rname_input);
+    INSERT INTO locatedIn VALUES (room_input, floor_input, did_input);
+    INSERT INTO Updates VALUES (CURRENT_DATE, roomCapacity_input, room_input, floor_input);
 END;
 $$ LANGUAGE plpgsql;
 
@@ -120,6 +118,20 @@ AS $$
 BEGIN
     DELETE FROM Departments
     WHERE did = did_input;
+END;
+$$ LANGUAGE plpgsql
+
+CREATE OR REPLACE PROCEDURE declare_health
+(IN eid_input INTEGER, IN date_input DATE, IN temperature_input NUMERIC(3,1))
+AS $$
+DECLARE fever BOOLEAN := FALSE;
+BEGIN
+    -- Checks if employee has fever
+    IF temperature_input > 37.5
+        THEN fever = TRUE;
+    END IF;
+    
+    INSERT INTO healthDeclaration VALUES (date_input, temperature_input, fever, eid_input);
 END;
 $$ LANGUAGE plpgsql;
 
