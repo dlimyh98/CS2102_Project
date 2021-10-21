@@ -38,7 +38,7 @@ CREATE TABLE Manager (
 CREATE TABLE healthDeclaration (
     date DATE NOT NULL,
     temp NUMERIC(3,1) NOT NULL CHECK (34.0 <= temp AND temp <= 43.0),
-    fever BOOLEAN CHECK ((temp > 37.5 AND fever = TRUE) OR (temp <= 37.5 AND fever = FALSE)),
+    fever BOOLEAN,
     eid INTEGER,
     PRIMARY KEY (date, eid),
     FOREIGN KEY (eid) REFERENCES Employees (eid) ON DELETE CASCADE
@@ -77,12 +77,13 @@ CREATE TABLE locatedIn (
 CREATE TABLE Updates (
     managerID INTEGER, /* Should have NOT NULL constraint but clashes add_room function */
 	date DATE DEFAULT '1001-01-01',
-	newCap INTEGER NOT NULL 
-		CHECK (new_cap >= 0),
+	newCap INTEGER NOT NULL CHECK (new_cap >= 0),
 	room INTEGER,
 	floor INTEGER,
 	PRIMARY KEY (date, room, floor),
 	FOREIGN KEY (room, floor) REFERENCES meetingRooms (room, floor) ON DELETE CASCADE
+    FOREIGN KEY (managerID) REFERENCES Manager (managerID) 
+    /* don't think i need ON DELETE cascade here because manager being removed doesn't mean the room and capacity is removed*/
 );
 
 CREATE TABLE Sessions (
@@ -112,6 +113,7 @@ CREATE TABLE Books (
     date DATE,
     time INTEGER CHECK (time>=0 AND time<24),
     approveStatus INTEGER DEFAULT 0 CHECK (approveStatus >= 0 AND approveStatus <= 2),
+    /* 0 -> pending approval, 1 -> disapproved, 2 -> approved */
     PRIMARY KEY (room, floor, date, time),
     FOREIGN KEY (bookerID) REFERENCES Booker (bookerID) ON DELETE CASCADE,
     FOREIGN KEY (room, floor, date, time) REFERENCES Sessions (room, floor, date, time) ON DELETE CASCADE
