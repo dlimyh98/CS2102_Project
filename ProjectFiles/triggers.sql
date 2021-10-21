@@ -64,7 +64,7 @@ BEGIN
     );
 
     IF numPreExistingSessions <> 0 
-        THEN RAISE NOTICE 'There is already an earlier request for the same Booking';
+        THEN RAISE NOTICE 'Session with this (room,floor,date,time) already exists, there MAY be a conflicting booking.';
         RETURN NULL;
     ELSE 
         RETURN NEW;
@@ -73,6 +73,35 @@ END;
 $$ LANGUAGE plpgsql;
 
 
-CREATE TRIGGER check_Sessions 
+CREATE TRIGGER check_sessions_availability
 BEFORE INSERT ON Sessions
 FOR EACH ROW EXECUTE FUNCTION check_sessions_availability_func();
+
+
+/**************************************** approve_meeting triggers ****************************************/
+CREATE OR REPLACE FUNCTION approve_bookings_func() RETURNS TRIGGER AS $$
+DECLARE numOfCorrespondingBookings INTEGER;
+BEGIN
+    -- per 1hr block
+    numOfCorrespondingBookings := (
+        SELECT COUNT(*)
+        FROM Books
+        WHERE (room = NEW.room AND floor = NEW.floor AND date = NEW.date AND time = NEW.time)
+    );
+
+    -- checking if whatever the Manager approves really exists in Books
+    IF numOfCorrespondingBookings = 0 THEN
+        RAISE NOTICE 'Manager is trying to approve a Booking that doesnt exist for this hour, no approval made.';
+        RETURN NULL;
+    ELSE
+        UPDATE Books
+        SET approveStatus = 2
+        WHERE room = NEW.room AND floor = NEW.floor AND date = NEW.date AND time = NEW.time;
+        RETURN NEW;
+    END IF;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE TRIGGER approve_bookings
+BEFORE INSERT ON Approves
+FOR EACH ROW EXECUTE FUNCTION approve_bookings_func();
