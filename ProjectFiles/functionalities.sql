@@ -56,6 +56,7 @@ DECLARE startHourTracker INT := startHour;
 DECLARE doesEmployeeHaveFever BOOLEAN;
 DECLARE employeeBookerQuery INTEGER;
 DECLARE sessionsInserted INTEGER;
+DECLARE numClashingBookings INTEGER;
 BEGIN
     doesEmployeeHaveFever := (
         SELECT fever
@@ -79,15 +80,34 @@ BEGIN
     END IF;
 
     WHILE startHourTracker < endHour LOOP
+
+        -- have to do for EACH 1hr block
+        numClashingBookings := (
+            SELECT COUNT(*)
+            FROM Books
+            WHERE (room = roomNumber AND floor = floorNumber AND date = requestedDate AND startHour = time AND approveStatus <> 1)
+        );
+
+        -- check Session availability first, it is easier
         INSERT INTO Sessions VALUES (roomNumber, floornumber, requestedDate, startHourTracker);
         GET DIAGNOSTICS sessionsInserted := ROW_COUNT;
 
         IF sessionsInserted = 1
             THEN INSERT INTO Books VALUES (employeeID, roomNumber, floorNumber, requestedDate, startHourTracker, 0);
-                 INSERT INTO Joins VALUES (employeeID, roomNumber, floorNumber, requestedDate, startHourTracker);
+            INSERT INTO Joins VALUES (employeeID, roomNumber, floorNumber, requestedDate, startHourTracker);
+
+        ELSIF sessionsInserted = 0
+            -- need to check if there is clashing Booking
+            THEN IF numClashingBookings = 0 THEN
+            INSERT INTO Books VALUES (employeeID, roomNumber, floorNumber, requestedDate, startHourTracker, 0);
+            INSERT INTO Joins VALUES (employeeID, roomNumber, floorNumber, requestedDate, startHourTracker);
+        ELSE
+            RAISE NOTICE 'Clashing booking detected for THIS hour, no booking made.';
         END IF;
-        startHourTracker := startHourTracker + 1;
-    END LOOP;
+    END IF;
+    startHourTracker := startHourTracker + 1;
+
+END LOOP;
 END;
 $$ LANGUAGE plpgsql;
 
@@ -112,5 +132,40 @@ BEGIN
     END IF;
     
     INSERT INTO healthDeclaration VALUES (date_input, temperature_input, fever, eid_input);
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE OR REPLACE PROCEDURE approve_meeting
+(IN floor_number INTEGER, IN room_number INTEGER, IN bookingDate DATE, IN startHour INTEGER, IN endHour INTEGER, IN employeeID INTEGER)
+AS $$
+DECLARE employeeManagerQuery INTEGER;
+DECLARE employeeDepartmentQuery INTEGER;
+DECLARE startHourTracker INTEGER := startHour;
+BEGIN
+    employeeManagerQuery := (
+        SELECT COUNT(*)
+        FROM Manager 
+        WHERE (managerID = employeeID)
+    );
+
+    employeeDepartmentQuery := (
+        SELECT COUNT(t1.did)
+        FROM (SELECT did FROM locatedIn WHERE room = room_number AND floor = floor_number) AS t1
+        JOIN (SELECT did FROM worksIn WHERE eid = employeeID) AS t2
+        ON t1.did = t2.did
+    );
+
+    IF employeeManagerQuery <> 1
+        THEN RAISE EXCEPTION 'Employee is not authorized to make an Approval.';
+        RETURN;
+    ELSIF employeeDepartmentQuery = 0
+        THEN RAISE EXCEPTION 'Manager does not belong to same department as Meeting Room.';
+        RETURN;
+    END IF;
+
+    WHILE startHourTracker < endHour LOOP
+        INSERT INTO Approves VALUES (employeeID, room_number, floor_number, bookingDate, startHourTracker);
+        startHourTracker := startHourTracker + 1;
+    END LOOP;
 END;
 $$ LANGUAGE plpgsql;
