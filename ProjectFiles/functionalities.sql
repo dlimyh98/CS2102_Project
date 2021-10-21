@@ -26,6 +26,7 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
+
 CREATE OR REPLACE PROCEDURE add_room
 (IN room_input INT, IN floor_input INT, IN rname_input TEXT, IN roomCapacity_input INT, IN did_input INT)
 AS $$
@@ -121,6 +122,7 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql
 
+
 CREATE OR REPLACE PROCEDURE declare_health
 (IN eid_input INTEGER, IN date_input DATE, IN temperature_input NUMERIC(3,1))
 AS $$
@@ -134,6 +136,7 @@ BEGIN
     INSERT INTO healthDeclaration VALUES (date_input, temperature_input, fever, eid_input);
 END;
 $$ LANGUAGE plpgsql;
+
 
 CREATE OR REPLACE PROCEDURE approve_meeting
 (IN floor_number INTEGER, IN room_number INTEGER, IN bookingDate DATE, IN startHour INTEGER, IN endHour INTEGER, IN employeeID INTEGER)
