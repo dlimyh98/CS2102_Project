@@ -172,3 +172,41 @@ BEGIN
     END LOOP;
 END;
 $$ LANGUAGE plpgsql;
+
+
+CREATE OR REPLACE PROCEDURE view_manager_report
+(IN startDate DATE, IN employeeID INT)
+RETURN TABLE(floor INT, room INT, date DATE, startHour INT, employeeID int)
+AS $$
+DECLARE employeeManagerQuery INT;
+DECLARE employeeDepartmentQuery INT;
+BEGIN
+    employeeManagerQuery := (
+        SELECT COUNT(*) FROM Manager WHERE managerID = employeeID
+    );
+
+    -- employeeDepartmentQuery := (
+    --     SELECT COUNT(t1.did)
+    --     FROM (SELECT did FROM locatedIn WHERE room = room_number AND floor = floor_number) AS t1
+    --     JOIN (SELECT did FROM worksIn WHERE eid = employeeID) AS t2
+    --     ON t1.did = t2.did
+    -- );
+
+    IF employeeManagerQuery <> 1
+        THEN RAISE EXCEPTION 'Employee is not authroized to amke an Approval.';
+        RETURN
+    END IF;
+
+    RETURN QUERY
+        SELECT Books.floor, Books.room, Books.date, Books.time, Books.bookerID 
+        FROM Books, locatedIn, worksIn
+        WHERE Books.approveStatus = 0
+        AND Books.date >= startDate
+        AND Books.room = locatedIn.room
+        AND Books.floor = locatedIn.floor
+        AND locatedIn.did = worksIn.did
+        AND worksIn.eid = employeeID
+        ORDER BY Books.date ASC, Books.time ASC
+    ;
+END;
+$$ LANGUAGE plpgsql;
