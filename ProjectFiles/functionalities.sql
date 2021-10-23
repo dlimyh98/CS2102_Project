@@ -185,13 +185,6 @@ BEGIN
         SELECT COUNT(*) FROM Manager WHERE managerID = employeeID
     );
 
-    -- employeeDepartmentQuery := (
-    --     SELECT COUNT(t1.did)
-    --     FROM (SELECT did FROM locatedIn WHERE room = room_number AND floor = floor_number) AS t1
-    --     JOIN (SELECT did FROM worksIn WHERE eid = employeeID) AS t2
-    --     ON t1.did = t2.did
-    -- );
-
     IF employeeManagerQuery <> 1
         THEN RAISE EXCEPTION 'Employee is not authroized to amke an Approval.';
         RETURN
