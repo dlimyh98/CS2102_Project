@@ -190,7 +190,7 @@ BEGIN
         AND employeeInMeetings.date = Approves.date
         AND employeeInMeetings.time = Approves.time
         AND startDate > employeeInMeetings.date
-        ORDER BY Approves.date DESC, Approves.time DESC
+        ORDER BY Approves.date ASC, Approves.time ASC
     ;   
 END;
 $$ LANGUAGE plpgsql;
