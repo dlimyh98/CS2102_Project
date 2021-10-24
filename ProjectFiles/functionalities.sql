@@ -29,9 +29,9 @@ $$ LANGUAGE plpgsql;
 
 CREATE OR REPLACE PROCEDURE add_room
 (IN floor_input INT, IN room_input INT, IN rname_input TEXT, IN roomCapacity_input INT, IN employeeID INT, IN did_input INT)
+AS $$
 DECLARE employeeManagerQuery INT;
 DECLARE employeeDepartmentQuery INT;
-AS $$
 BEGIN
     employeeManagerQuery := (
         SELECT COUNT(*)
@@ -40,10 +40,9 @@ BEGIN
     );
 
     employeeDepartmentQuery := (
-        SELECT COUNT(t1.did)
-        FROM (SELECT did FROM locatedIn WHERE room = room_number AND floor = floor_number) AS t1
-        JOIN (SELECT did FROM worksIn WHERE eid = employeeID) AS t2
-        ON t1.did = t2.did
+        SELECT COUNT(*)
+        FROM worksIn
+        WHERE (eid = employeeID AND did = did_input)
     );
 
     IF employeeManagerQuery <> 1
@@ -53,7 +52,7 @@ BEGIN
         THEN RAISE EXCEPTION 'Manager does not belong to same department as Meeting Room.';
         RETURN;
     END IF;
-    
+
     INSERT INTO meetingRooms VALUES (room_input, floor_input, rname_input);
     INSERT INTO locatedIn VALUES (room_input, floor_input, did_input);
     INSERT INTO Updates VALUES (NULL, CURRENT_DATE, roomCapacity_input, room_input, floor_input);
