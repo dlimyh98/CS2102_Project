@@ -174,6 +174,37 @@ END;
 $$ LANGUAGE plpgsql;
 
 
+CREATE OR REPLACE FUNCTION view_manager_report
+(IN startDate DATE, IN employeeID INT)
+RETURNS TABLE(floor INT, room INT, date DATE, startHour INT, managerID int)
+AS $$
+DECLARE employeeManagerQuery INT;
+DECLARE employeeDepartmentQuery INT;
+BEGIN
+    employeeManagerQuery := (
+        SELECT COUNT(*) FROM Manager WHERE managerID = employeeID
+    );
+
+    IF employeeManagerQuery <> 1
+        THEN RAISE EXCEPTION 'Employee is not authorized to make an Approval.';
+        RETURN;
+    END IF;
+
+    RETURN QUERY
+        SELECT Books.floor, Books.room, Books.date, Books.time, Books.bookerID 
+        FROM Books, locatedIn, worksIn
+        WHERE Books.approveStatus = 0
+        AND Books.date >= startDate
+        AND Books.room = locatedIn.room
+        AND Books.floor = locatedIn.floor
+        AND locatedIn.did = worksIn.did
+        AND worksIn.eid = employeeID
+        ORDER BY Books.date ASC, Books.time ASC
+    ;
+END;
+$$ LANGUAGE plpgsql;
+
+
 CREATE OR REPLACE FUNCTION view_future_meeting
 (IN startDate DATE, IN employeeID INT)
 RETURNS TABLE(floorNumber INT, roomNumber INT, date DATE, startHour INT)
@@ -194,3 +225,4 @@ BEGIN
     ;   
 END;
 $$ LANGUAGE plpgsql;
+
