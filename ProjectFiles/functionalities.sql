@@ -174,9 +174,9 @@ END;
 $$ LANGUAGE plpgsql;
 
 
-CREATE OR REPLACE PROCEDURE view_future_meeting
+CREATE OR REPLACE FUNCTION view_future_meeting
 (IN startDate DATE, IN employeeID INT)
-RETURN TABLE(floorNumber INT, roomNumber INT, date DATE, startHour INT)
+RETURNS TABLE(floorNumber INT, roomNumber INT, date DATE, startHour INT)
 AS $$
 BEGIN
     RETURN QUERY
