@@ -172,3 +172,25 @@ BEGIN
     END LOOP;
 END;
 $$ LANGUAGE plpgsql;
+
+
+CREATE OR REPLACE FUNCTION view_future_meeting
+(IN startDate DATE, IN employeeID INT)
+RETURNS TABLE(floorNumber INT, roomNumber INT, date DATE, startHour INT)
+AS $$
+BEGIN
+    RETURN QUERY
+        SELECT Approves.floor, Approves.room, Approves.date, Approves.time 
+        FROM
+        (SELECT * FROM Joins
+        WHERE Joins.eid = employeeID) AS employeeInMeetings,
+        Approves
+        WHERE employeeInMeetings.room = Approves.room
+        AND employeeInMeetings.floor = Approves.floor
+        AND employeeInMeetings.date = Approves.date
+        AND employeeInMeetings.time = Approves.time
+        AND startDate > employeeInMeetings.date
+        ORDER BY Approves.date ASC, Approves.time ASC
+    ;   
+END;
+$$ LANGUAGE plpgsql;
