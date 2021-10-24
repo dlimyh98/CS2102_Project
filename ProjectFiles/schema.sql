@@ -75,13 +75,13 @@ CREATE TABLE locatedIn (
 );
 
 CREATE TABLE Updates (
-    managerID INTEGER, /* Should have NOT NULL constraint but clashes add_room function */
+    managerID INTEGER,
 	date DATE DEFAULT '1001-01-01',
-	newCap INTEGER NOT NULL CHECK (new_cap >= 0),
+	newCap INTEGER NOT NULL CHECK (newCap >= 0),
 	room INTEGER,
 	floor INTEGER,
 	PRIMARY KEY (date, room, floor),
-	FOREIGN KEY (room, floor) REFERENCES meetingRooms (room, floor) ON DELETE CASCADE
+	FOREIGN KEY (room, floor) REFERENCES meetingRooms (room, floor) ON DELETE CASCADE,
     FOREIGN KEY (managerID) REFERENCES Manager (managerID) 
     /* don't think i need ON DELETE cascade here because manager being removed doesn't mean the room and capacity is removed*/
 );

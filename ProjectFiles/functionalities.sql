@@ -28,12 +28,35 @@ $$ LANGUAGE plpgsql;
 
 
 CREATE OR REPLACE PROCEDURE add_room
-(IN room_input INT, IN floor_input INT, IN rname_input TEXT, IN roomCapacity_input INT, IN did_input INT)
+(IN floor_input INT, IN room_input INT, IN rname_input TEXT, IN roomCapacity_input INT, IN employeeID INT, IN did_input INT)
+DECLARE employeeManagerQuery INT;
+DECLARE employeeDepartmentQuery INT;
 AS $$
 BEGIN
+    employeeManagerQuery := (
+        SELECT COUNT(*)
+        FROM Manager 
+        WHERE (managerID = employeeID)
+    );
+
+    employeeDepartmentQuery := (
+        SELECT COUNT(t1.did)
+        FROM (SELECT did FROM locatedIn WHERE room = room_number AND floor = floor_number) AS t1
+        JOIN (SELECT did FROM worksIn WHERE eid = employeeID) AS t2
+        ON t1.did = t2.did
+    );
+
+    IF employeeManagerQuery <> 1
+        THEN RAISE EXCEPTION 'Employee is not authorized to make a change in room capacity.';
+        RETURN;
+    ELSIF employeeDepartmentQuery = 0
+        THEN RAISE EXCEPTION 'Manager does not belong to same department as Meeting Room.';
+        RETURN;
+    END IF;
+    
     INSERT INTO meetingRooms VALUES (room_input, floor_input, rname_input);
     INSERT INTO locatedIn VALUES (room_input, floor_input, did_input);
-    INSERT INTO Updates VALUES (CURRENT_DATE, roomCapacity_input, room_input, floor_input);
+    INSERT INTO Updates VALUES (NULL, CURRENT_DATE, roomCapacity_input, room_input, floor_input);
 END;
 $$ LANGUAGE plpgsql;
 
@@ -223,6 +246,37 @@ BEGIN
         AND startDate > employeeInMeetings.date
         ORDER BY Approves.date ASC, Approves.time ASC
     ;   
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE OR REPLACE PROCEDURE change_capacity
+(IN floor_number INT, IN room_number INT, IN new_capacity INT, IN date DATE, IN employeeID INT)
+AS $$
+DECLARE employeeManagerQuery INT;
+DECLARE employeeDepartmentQuery INT;
+BEGIN
+    employeeManagerQuery := (
+        SELECT COUNT(*)
+        FROM Manager 
+        WHERE (managerID = employeeID)
+    );
+
+    employeeDepartmentQuery := (
+        SELECT COUNT(t1.did)
+        FROM (SELECT did FROM locatedIn WHERE room = room_number AND floor = floor_number) AS t1
+        JOIN (SELECT did FROM worksIn WHERE eid = employeeID) AS t2
+        ON t1.did = t2.did
+    );
+
+    IF employeeManagerQuery <> 1
+        THEN RAISE EXCEPTION 'Employee is not authorized to make a change in room capacity.';
+        RETURN;
+    ELSIF employeeDepartmentQuery = 0
+        THEN RAISE EXCEPTION 'Manager does not belong to same department as Meeting Room.';
+        RETURN;
+    END IF;
+
+    INSERT INTO Updates VALUES (employeeID, date, new_capacity, room_number, floor_number);
 END;
 $$ LANGUAGE plpgsql;
 
