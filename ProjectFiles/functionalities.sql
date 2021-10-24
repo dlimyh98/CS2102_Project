@@ -174,9 +174,9 @@ END;
 $$ LANGUAGE plpgsql;
 
 
-CREATE OR REPLACE PROCEDURE view_manager_report
+CREATE OR REPLACE FUNCTION view_manager_report
 (IN startDate DATE, IN employeeID INT)
-RETURN TABLE(floor INT, room INT, date DATE, startHour INT, employeeID int)
+RETURNS TABLE(floor INT, room INT, date DATE, startHour INT, managerID int)
 AS $$
 DECLARE employeeManagerQuery INT;
 DECLARE employeeDepartmentQuery INT;
@@ -187,7 +187,7 @@ BEGIN
 
     IF employeeManagerQuery <> 1
         THEN RAISE EXCEPTION 'Employee is not authroized to amke an Approval.';
-        RETURN
+        RETURN;
     END IF;
 
     RETURN QUERY
@@ -203,3 +203,26 @@ BEGIN
     ;
 END;
 $$ LANGUAGE plpgsql;
+
+
+CREATE OR REPLACE FUNCTION view_future_meeting
+(IN startDate DATE, IN employeeID INT)
+RETURNS TABLE(floorNumber INT, roomNumber INT, date DATE, startHour INT)
+AS $$
+BEGIN
+    RETURN QUERY
+        SELECT Approves.floor, Approves.room, Approves.date, Approves.time 
+        FROM
+        (SELECT * FROM Joins
+        WHERE Joins.eid = employeeID) AS employeeInMeetings,
+        Approves
+        WHERE employeeInMeetings.room = Approves.room
+        AND employeeInMeetings.floor = Approves.floor
+        AND employeeInMeetings.date = Approves.date
+        AND employeeInMeetings.time = Approves.time
+        AND startDate > employeeInMeetings.date
+        ORDER BY Approves.date ASC, Approves.time ASC
+    ;   
+END;
+$$ LANGUAGE plpgsql;
+
