@@ -55,7 +55,7 @@ BEGIN
 
     INSERT INTO meetingRooms VALUES (room_input, floor_input, rname_input);
     INSERT INTO locatedIn VALUES (room_input, floor_input, did_input);
-    INSERT INTO Updates VALUES (NULL, CURRENT_DATE, roomCapacity_input, room_input, floor_input);
+    INSERT INTO Updates VALUES (employeeID, CURRENT_DATE, roomCapacity_input, room_input, floor_input);
 END;
 $$ LANGUAGE plpgsql;
 
