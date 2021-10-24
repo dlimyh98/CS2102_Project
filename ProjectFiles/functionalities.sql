@@ -186,7 +186,7 @@ BEGIN
     );
 
     IF employeeManagerQuery <> 1
-        THEN RAISE EXCEPTION 'Employee is not authroized to amke an Approval.';
+        THEN RAISE EXCEPTION 'Employee is not authorized to make an Approval.';
         RETURN;
     END IF;
 
