@@ -184,20 +184,20 @@ BEGIN
     CREATE TEMP TABLE timeslots(time INT);
     INSERT INTO timeslots VALUES (0), (1), (2), (3), (4), (5), (6), (7), (8), (9), (10), (11), (12),
                                 (13), (14), (15), (16), (17), (18), (19), (20), (21), (22), (23), (24);
-    CREATE TEMP TABLE allSlots(
+    CREATE TEMP TABLE allSlots AS(
         SELECT meetingRooms.room, meetingRooms.floor, searchDate.date, timeslots.time
         FROM meetingRooms, searchDate, timeslots
     );
-    CREATE TEMP TABLE bookedSlots(
+    CREATE TEMP TABLE bookedSlots AS(
         SELECT Books.room, Books.floor, Books.date, Books.time
         FROM Books
         WHERE Books.date = requestedDate
         AND Books.time >= startHour
         AND Books.time < endHour
     );
-    CREATE TEMP TABLE availableSlots(
+    CREATE TEMP TABLE availableSlots AS(
         SELECT allSlots.room, allSlots.floor, allSlots.date, allSlots.time
-        FROM allSlots LEFT OUTER JOIN bookedSlots
+        FROM allSlots EXCEPT bookedSlots
     );
 
     RETURN QUERY
