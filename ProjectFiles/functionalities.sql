@@ -119,16 +119,13 @@ BEGIN
 
         IF sessionsInserted = 1
             THEN INSERT INTO Books VALUES (employeeID, roomNumber, floorNumber, requestedDate, startHourTracker, 0);
-            INSERT INTO Joins VALUES (employeeID, roomNumber, floorNumber, requestedDate, startHourTracker);
-
         ELSIF sessionsInserted = 0
             -- need to check if there is clashing Booking
             THEN IF numClashingBookings = 0 THEN
             INSERT INTO Books VALUES (employeeID, roomNumber, floorNumber, requestedDate, startHourTracker, 0);
-            INSERT INTO Joins VALUES (employeeID, roomNumber, floorNumber, requestedDate, startHourTracker);
-                  ELSE
+                 ELSE
                        RAISE NOTICE 'Clashing booking detected for THIS hour, no booking made.';
-                  END IF;
+                 END IF;
         END IF;
     startHourTracker := startHourTracker + 1;
 
