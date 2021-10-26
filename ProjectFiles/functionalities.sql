@@ -174,44 +174,42 @@ END;
 $$ LANGUAGE plpgsql;
 
 
-CREATE OR REPLACE PROCEDURE search_room
+CREATE OR REPLACE FUNCTION search_room
 (IN capacity INT, IN requestedDate DATE, IN startHour INT, IN endHour INT)
-RETURN TABLE(floor INT, room INT, departmentID INT, capacity INT)
+RETURNS TABLE(floor INT, room INT, departmentID INT, room_capacity INT)
 AS $$
-DECLARE searchDate TABLE(date DATE);
-DECLARE timeslots TABLE(time INT);
-DECLARE allSlots TABLE(room INT, floor INT, date DATE, time INT)
-DECLARE bookedSlots TABLE(room INT, floor INT)
-DECLARE availableSlots TABLE(room INT, floor INT, date DATE, time INT)
 BEGIN
-    INSERT INTO searchDate VALUES (requestedDate);
+    CREATE TEMP TABLE searchDate(date DATE);
+    INSERT INTO searchDate VALUES(requestedDate);
+    CREATE TEMP TABLE timeslots(time INT);
     INSERT INTO timeslots VALUES (0), (1), (2), (3), (4), (5), (6), (7), (8), (9), (10), (11), (12),
                                 (13), (14), (15), (16), (17), (18), (19), (20), (21), (22), (23), (24);
-    allSlots:= (
+    CREATE TEMP TABLE allSlots(
         SELECT meetingRooms.room, meetingRooms.floor, searchDate.date, timeslots.time
         FROM meetingRooms, searchDate, timeslots
-    )
-    bookedSlots := (
+    );
+    CREATE TEMP TABLE bookedSlots(
         SELECT Books.room, Books.floor, Books.date, Books.time
         FROM Books
         WHERE Books.date = requestedDate
         AND Books.time >= startHour
         AND Books.time < endHour
     );
-    availableSlots := (
+    CREATE TEMP TABLE availableSlots(
         SELECT allSlots.room, allSlots.floor, allSlots.date, allSlots.time
         FROM allSlots LEFT OUTER JOIN bookedSlots
     );
+
     RETURN QUERY
-        SELECT u2.floor, u2.room, locatedIn.departmentID, u2.new_cap
-        FROM availableSlots, locatedIn, Updates u1, Updates u2
-        WHERE availableSlots.room = locatedIn.room
-        AND availableSlots.floor = locatedIn.floor
-        AND u1.room = u2.room
-        AND u1.floor = u2.floor
-        AND availableSlots.room = u2.room
-        AND availableSlots.floor = u2.floor
-        AND u2.date > u1.date
+    SELECT u2.floor, u2.room, locatedIn.departmentID, u2.new_cap AS room_capacity
+    FROM availableSlots, locatedIn, Updates u1, Updates u2
+    WHERE availableSlots.room = locatedIn.room
+    AND availableSlots.floor = locatedIn.floor
+    AND u1.room = u2.room
+    AND u1.floor = u2.floor
+    AND availableSlots.room = u2.room
+    AND availableSlots.floor = u2.floor
+    AND u2.date > u1.date
     ;
 END;
-$$ LANGUAGE plgpgsql;
+$$ LANGUAGE plpgsql;

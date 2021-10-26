@@ -81,7 +81,7 @@ CREATE TABLE Updates (
 	room INTEGER,
 	floor INTEGER,
 	PRIMARY KEY (date, room, floor),
-	FOREIGN KEY (room, floor) REFERENCES meetingRooms (room, floor) ON DELETE CASCADE
+	FOREIGN KEY (room, floor) REFERENCES meetingRooms (room, floor) ON DELETE CASCADE,
     FOREIGN KEY (managerID) REFERENCES Manager (managerID) 
     /* don't think i need ON DELETE cascade here because manager being removed doesn't mean the room and capacity is removed*/
 );
