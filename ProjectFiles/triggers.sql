@@ -105,3 +105,32 @@ $$ LANGUAGE plpgsql;
 CREATE TRIGGER approve_bookings
 BEFORE INSERT ON Approves
 FOR EACH ROW EXECUTE FUNCTION approve_bookings_func();
+
+/**************************************** change_capacity triggers ****************************************/
+CREATE OR REPLACE FUNCTION change_capacity_remove_bookings_func() RETURNS TRIGGER AS $$
+BEGIN
+    -- List of future meetings that have lower capacity and needed to be removed
+    CREATE TEMP TABLE meetingsToBeRemoved ON COMMIT DROP AS (
+        SELECT room, floor, date, time, COUNT(*)
+        FROM Joins
+        WHERE (room = NEW.room AND floor = NEW.floor AND date >= NEW.date)
+        GROUP BY room, floor, date, time
+        HAVING COUNT(*) > NEW.newCap
+    );
+    -- Delete future meetings that have lower capacity
+    DELETE FROM Sessions
+    WHERE CTID IN (SELECT Sessions.CTID
+                    FROM Sessions JOIN meetingsToBeRemoved 
+                    ON (Sessions.room = meetingsToBeRemoved.room AND
+                        Sessions.floor = meetingsToBeRemoved.floor AND 
+                        Sessions.date = meetingsToBeRemoved.date AND 
+                        Sessions.time = meetingsToBeRemoved.time)
+                    );
+    RETURN NEW;
+    
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE TRIGGER change_capacity_remove_bookings
+BEFORE INSERT ON Updates
+FOR EACH ROW EXECUTE FUNCTION change_capacity_remove_bookings_func();
