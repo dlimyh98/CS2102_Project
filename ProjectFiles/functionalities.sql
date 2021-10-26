@@ -126,10 +126,10 @@ BEGIN
             THEN IF numClashingBookings = 0 THEN
             INSERT INTO Books VALUES (employeeID, roomNumber, floorNumber, requestedDate, startHourTracker, 0);
             INSERT INTO Joins VALUES (employeeID, roomNumber, floorNumber, requestedDate, startHourTracker);
-        ELSE
-            RAISE NOTICE 'Clashing booking detected for THIS hour, no booking made.';
+                  ELSE
+                       RAISE NOTICE 'Clashing booking detected for THIS hour, no booking made.';
+                  END IF;
         END IF;
-    END IF;
     startHourTracker := startHourTracker + 1;
 
 END LOOP;
@@ -144,7 +144,7 @@ BEGIN
     DELETE FROM Departments
     WHERE did = did_input;
 END;
-$$ LANGUAGE plpgsql
+$$ LANGUAGE plpgsql;
 
 
 CREATE OR REPLACE PROCEDURE declare_health
