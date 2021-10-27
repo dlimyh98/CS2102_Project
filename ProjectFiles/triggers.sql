@@ -387,6 +387,7 @@ BEGIN
         THEN RETURN NULL;
     ELSE
         RETURN OLD;
+    END IF;
 END;
 $$ LANGUAGE plpgsql;
 
@@ -407,10 +408,15 @@ BEGIN
         AND Approves.floor = OLD.floor
         AND Approves.date = OLD.date
         AND Approves.time = OLD.time
-    )
+    );
     IF isMeetingApproved <> 1
         THEN RETURN NULL;
     ELSE
         RETURN OLD;
+    END IF;
 END;
 $$ LANGUAGE plpgsql;
+
+CREATE TRIGGER leave_meeting_check
+BEFORE DELETE ON Joins
+FOR EACH ROW EXECUTE FUNCTION leave_meeting_check_func();
