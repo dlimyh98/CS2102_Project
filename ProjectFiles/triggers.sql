@@ -366,3 +366,30 @@ $$ LANGUAGE plpgsql;
 CREATE TRIGGER change_capacity_remove_bookings
 BEFORE INSERT ON Updates
 FOR EACH ROW EXECUTE FUNCTION change_capacity_remove_bookings_func();
+
+/**************************************** unbook_room triggers *****************************************/
+CREATE OR REPLACE FUNCTION unbook_room_check_func() RETURNS TRIGGER AS $$
+DECLARE employeeBookerQuery INT;
+BEGIN
+    -- To make sure that condition to remove booking is met, e.g. employee making the booking, booking exist and booking status
+    -- don't need to check if employee resigned as the booking will already been deleted and can't be found
+    employeeBookerQuery := (
+        SELECT COUNT(*)
+        FROM Books
+        WHERE OLD.floor = Books.floor
+        AND OLD.room = Books.room
+        AND OLD.date = Books.date
+        AND OLD.time = Books.time
+        AND OLD.eid = Books.bookerID
+        AND Books.approve_meeting = 0
+    );
+    IF employeeBookerQuery <> 1
+        THEN RETURN NULL;
+    ELSE
+        RETURN OLD;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE TRIGGER unbook_room_check
+BEFORE DELETE ON Sessions
+FOR EACH ROW EXECUTE FUNCTION unbook_room_check_func();
