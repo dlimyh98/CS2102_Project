@@ -28,12 +28,36 @@ $$ LANGUAGE plpgsql;
 
 
 CREATE OR REPLACE PROCEDURE add_room
-(IN room_input INT, IN floor_input INT, IN rname_input TEXT, IN roomCapacity_input INT, IN did_input INT)
+(IN floor_input INT, IN room_input INT, IN rname_input TEXT, IN roomCapacity_input INT, IN employeeID INT, IN did_input INT)
 AS $$
+DECLARE employeeManagerQuery INT;
+DECLARE employeeDepartmentQuery INT;
 BEGIN
+    -- Checks if employee is a manager
+    employeeManagerQuery := (
+        SELECT COUNT(*)
+        FROM Manager 
+        WHERE (managerID = employeeID)
+    );
+    -- Checks if employee is from the correct department
+    employeeDepartmentQuery := (
+        SELECT COUNT(*)
+        FROM worksIn
+        WHERE (eid = employeeID AND did = did_input)
+    );
+
+    IF employeeManagerQuery <> 1
+        THEN RAISE EXCEPTION 'Employee is not authorized to make a change in room capacity.';
+        RETURN;
+    ELSIF employeeDepartmentQuery = 0
+        THEN RAISE EXCEPTION 'Manager does not belong to same department as Meeting Room.';
+        RETURN;
+    END IF;
+
     INSERT INTO meetingRooms VALUES (room_input, floor_input, rname_input);
     INSERT INTO locatedIn VALUES (room_input, floor_input, did_input);
-    INSERT INTO Updates VALUES (CURRENT_DATE, roomCapacity_input, room_input, floor_input);
+    -- Insert room capacity in Updates with the date the room was added 
+    INSERT INTO Updates VALUES (employeeID, CURRENT_DATE, roomCapacity_input, room_input, floor_input);
 END;
 $$ LANGUAGE plpgsql;
 
@@ -102,10 +126,10 @@ BEGIN
             THEN IF numClashingBookings = 0 THEN
             INSERT INTO Books VALUES (employeeID, roomNumber, floorNumber, requestedDate, startHourTracker, 0);
             INSERT INTO Joins VALUES (employeeID, roomNumber, floorNumber, requestedDate, startHourTracker);
-        ELSE
-            RAISE NOTICE 'Clashing booking detected for THIS hour, no booking made.';
+                  ELSE
+                       RAISE NOTICE 'Clashing booking detected for THIS hour, no booking made.';
+                  END IF;
         END IF;
-    END IF;
     startHourTracker := startHourTracker + 1;
 
 END LOOP;
@@ -120,7 +144,7 @@ BEGIN
     DELETE FROM Departments
     WHERE did = did_input;
 END;
-$$ LANGUAGE plpgsql
+$$ LANGUAGE plpgsql;
 
 
 CREATE OR REPLACE PROCEDURE declare_health
@@ -211,5 +235,108 @@ BEGIN
     AND availableSlots.floor = u2.floor
     AND u2.date > u1.date
     ;
+END;
+$$ LANGUAGE plpgsql;
+
+
+CREATE OR REPLACE FUNCTION view_manager_report
+(IN startDate DATE, IN employeeID INT)
+RETURNS TABLE(floor INT, room INT, date DATE, startHour INT, managerID int)
+AS $$
+DECLARE employeeManagerQuery INT;
+DECLARE employeeDepartmentQuery INT;
+BEGIN
+    employeeManagerQuery := (
+        SELECT COUNT(*) FROM Manager WHERE managerID = employeeID
+    );
+
+    IF employeeManagerQuery <> 1
+        THEN RAISE EXCEPTION 'Employee is not authorized to make an Approval.';
+        RETURN;
+    END IF;
+
+    RETURN QUERY
+        SELECT Books.floor, Books.room, Books.date, Books.time, Books.bookerID 
+        FROM Books, locatedIn, worksIn
+        WHERE Books.approveStatus = 0
+        AND Books.date >= startDate
+        AND Books.room = locatedIn.room
+        AND Books.floor = locatedIn.floor
+        AND locatedIn.did = worksIn.did
+        AND worksIn.eid = employeeID
+        ORDER BY Books.date ASC, Books.time ASC
+    ;
+END;
+$$ LANGUAGE plpgsql;
+
+
+CREATE OR REPLACE FUNCTION view_future_meeting
+(IN startDate DATE, IN employeeID INT)
+RETURNS TABLE(floorNumber INT, roomNumber INT, date DATE, startHour INT)
+AS $$
+BEGIN
+    RETURN QUERY
+        SELECT Approves.floor, Approves.room, Approves.date, Approves.time 
+        FROM
+        (SELECT * FROM Joins
+        WHERE Joins.eid = employeeID) AS employeeInMeetings,
+        Approves
+        WHERE employeeInMeetings.room = Approves.room
+        AND employeeInMeetings.floor = Approves.floor
+        AND employeeInMeetings.date = Approves.date
+        AND employeeInMeetings.time = Approves.time
+        AND startDate > employeeInMeetings.date
+        ORDER BY Approves.date ASC, Approves.time ASC
+    ;   
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE OR REPLACE PROCEDURE change_capacity
+(IN floor_number INT, IN room_number INT, IN new_capacity INT, IN date DATE, IN employeeID INT)
+AS $$
+DECLARE employeeManagerQuery INT;
+DECLARE employeeDepartmentQuery INT;
+BEGIN
+    -- Checks if employee is a manager
+    employeeManagerQuery := (
+        SELECT COUNT(*)
+        FROM Manager 
+        WHERE (managerID = employeeID)
+    );
+    -- Checks if employee is from the correct department
+    employeeDepartmentQuery := (
+        SELECT COUNT(t1.did)
+        FROM (SELECT did FROM locatedIn WHERE room = room_number AND floor = floor_number) AS t1
+        JOIN (SELECT did FROM worksIn WHERE eid = employeeID) AS t2
+        ON t1.did = t2.did
+    );
+
+    IF employeeManagerQuery <> 1
+        THEN RAISE EXCEPTION 'Employee is not authorized to make a change in room capacity.';
+        RETURN;
+    ELSIF employeeDepartmentQuery = 0
+        THEN RAISE EXCEPTION 'Manager does not belong to same department as Meeting Room.';
+        RETURN;
+    END IF;
+
+    INSERT INTO Updates VALUES (employeeID, date, new_capacity, room_number, floor_number);
+END;
+$$ LANGUAGE plpgsql;
+
+
+CREATE OR REPLACE FUNCTION non_compliance
+(IN start_date DATE, IN end_date DATE)
+RETURNS TABLE (employeeID INT, numberOfDays BIGINT) AS $$
+-- Number of days inclusive of start date and end date
+DECLARE numberOfDays INT := (end_date - start_date) + 1;
+BEGIN
+    -- List of employees and the number of days non-compliant
+    RETURN QUERY
+    SELECT eid, (COUNT(*)-numberOfDays)
+    FROM healthDeclaration
+    WHERE (date >= start_date AND date <= end_date)
+    GROUP BY eid
+    HAVING ((COUNT(*)-numberOfDays) > 0)
+    ORDER BY (COUNT(*)-numberOfDays) DESC;
 END;
 $$ LANGUAGE plpgsql;
