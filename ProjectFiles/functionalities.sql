@@ -78,6 +78,7 @@ CREATE OR REPLACE PROCEDURE book_room
 (IN floorNumber INT, IN roomNumber INT, IN requestedDate DATE, IN startHour INT, IN endHour INT, IN employeeID INT)
 AS $$
 DECLARE startHourTracker INT := startHour;
+DECLARE isEmployeeResigned BOOLEAN;
 DECLARE doesEmployeeHaveFever BOOLEAN;
 DECLARE employeeBookerQuery INTEGER;
 DECLARE sessionsInserted INTEGER;
@@ -95,12 +96,20 @@ BEGIN
         WHERE (bookerID = employeeID)
     );
 
+    isEmployeeResigned := (
+        SELECT isResigned
+        FROM Employees
+        WHERE Employees.eid = employeeID
+    );
+
     IF doesEmployeeHaveFever = TRUE
         THEN RAISE EXCEPTION 'Employee has fever, not allowed to perform a booking.';
         RETURN;
-
     ELSIF employeeBookerQuery <> 1
         THEN RAISE EXCEPTION 'Employee type is not authorized to perform a booking.';
+        RETURN;
+    ELSIF isEmployeeResigned = TRUE
+        THEN RAISE EXCEPTION 'Employee has resigned, is not able to make a booking.';
         RETURN;
     END IF;
 
@@ -119,16 +128,13 @@ BEGIN
 
         IF sessionsInserted = 1
             THEN INSERT INTO Books VALUES (employeeID, roomNumber, floorNumber, requestedDate, startHourTracker, 0);
-            INSERT INTO Joins VALUES (employeeID, roomNumber, floorNumber, requestedDate, startHourTracker);
-
         ELSIF sessionsInserted = 0
             -- need to check if there is clashing Booking
             THEN IF numClashingBookings = 0 THEN
             INSERT INTO Books VALUES (employeeID, roomNumber, floorNumber, requestedDate, startHourTracker, 0);
-            INSERT INTO Joins VALUES (employeeID, roomNumber, floorNumber, requestedDate, startHourTracker);
-                  ELSE
+                 ELSE
                        RAISE NOTICE 'Clashing booking detected for THIS hour, no booking made.';
-                  END IF;
+                 END IF;
         END IF;
     startHourTracker := startHourTracker + 1;
 
@@ -165,6 +171,7 @@ $$ LANGUAGE plpgsql;
 CREATE OR REPLACE PROCEDURE approve_meeting
 (IN floor_number INTEGER, IN room_number INTEGER, IN bookingDate DATE, IN startHour INTEGER, IN endHour INTEGER, IN employeeID INTEGER)
 AS $$
+DECLARE isEmployeeResigned BOOLEAN;
 DECLARE employeeManagerQuery INTEGER;
 DECLARE employeeDepartmentQuery INTEGER;
 DECLARE startHourTracker INTEGER := startHour;
@@ -182,11 +189,20 @@ BEGIN
         ON t1.did = t2.did
     );
 
+    isEmployeeResigned := (
+        SELECT isResigned
+        FROM Employees
+        WHERE Employees.eid = employeeID
+    );
+
     IF employeeManagerQuery <> 1
         THEN RAISE EXCEPTION 'Employee is not authorized to make an Approval.';
         RETURN;
     ELSIF employeeDepartmentQuery = 0
         THEN RAISE EXCEPTION 'Manager does not belong to same department as Meeting Room.';
+        RETURN;
+    ELSIF isEmployeeResigned = TRUE
+        THEN RAISE EXCEPTION 'Manager has resigned, is not able to approve a Booking.';
         RETURN;
     END IF;
 

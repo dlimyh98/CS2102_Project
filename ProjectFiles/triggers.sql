@@ -249,6 +249,18 @@ CREATE TRIGGER check_sessions_availability
 BEFORE INSERT ON Sessions
 FOR EACH ROW EXECUTE FUNCTION check_sessions_availability_func();
 
+--------------------------- Employee booking the room immediately joins booked meeting ---------------------------
+CREATE OR REPLACE FUNCTION booker_joins_booked_room_func() RETURNS TRIGGER AS $$
+BEGIN
+    INSERT INTO Joins VALUES (NEW.bookerID, NEW.room, NEW.floor, NEW.date, NEW.time);
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE TRIGGER booker_joins_booked_room 
+AFTER INSERT ON Books
+FOR EACH ROW EXECUTE FUNCTION booker_joins_booked_room_func();
+
 --------------------------- ensure 'exactly one' participation from Sessions to Books ---------------------------
 CREATE OR REPLACE FUNCTION check_Sessions_to_Books_func() RETURNS TRIGGER AS $$
 DECLARE numBookings INTEGER;
