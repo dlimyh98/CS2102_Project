@@ -399,14 +399,11 @@ BEGIN
         );
     capacityCount :=  (
             SELECT u2.newCap
-            From Updates u1, Updates u2
-            WHERE u2.date > u1.date
-            AND NEW.date >= u2.date
-            AND u2.room = u1.room
-            AND u2.floor = u1.floor
-            AND u2.room = NEW.room
-            AND u2.floor = NEW.floor
-            ORDER BY u2.newCap DESC
+            From Updates
+            WHERE NEW.date >= Updates.date
+            AND Updates.room = NEW.room
+            AND Updates.floor = NEW.floor
+            ORDER BY Updates.date DESC
             LIMIT 1
         );
     IF employeeInMeetingQuery <> 1 AND isMeetingApproved = 1 AND participantCount < capacityCount
