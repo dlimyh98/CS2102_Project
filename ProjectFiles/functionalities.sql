@@ -379,7 +379,7 @@ $$ LANGUAGE plpgsql;
 CREATE OR REPLACE PROCEDURE leave_meeting
 (IN floor_input INT, IN room_input INT, IN requestedDate DATE, IN startHour INT, IN endHour INT, IN employeeID INT)
 AS $$
-DECLARE startHourTracker INT := startHour
+DECLARE startHourTracker INT := startHour;
 BEGIN
     WHILE startHourTracker < endHour LOOP
         DELETE FROM Joins
