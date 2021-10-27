@@ -406,7 +406,7 @@ BEGIN
             AND u2.room = NEW.room
             AND u2.floor = NEW.floor
         );
-    IF employeeInMeetingQuery <> 1 AND isMeetingApproved = 1  AND participantCount < capacityCount
+    IF employeeInMeetingQuery <> 1 AND isMeetingApproved = 1 AND participantCount < capacityCount
         THEN RETURN NEW;
     ELSE
         THEN RETURN NULL;
