@@ -406,6 +406,8 @@ BEGIN
             AND u2.floor = u1.floor
             AND u2.room = NEW.room
             AND u2.floor = NEW.floor
+            ORDER BY u2.newCap DESC
+            LIMIT 1
         );
     IF employeeInMeetingQuery <> 1 AND isMeetingApproved = 1 AND participantCount < capacityCount
         THEN RETURN NEW;
