@@ -352,7 +352,7 @@ BEGIN
     -- don't need to check if employee resigned as the booking will already been deleted and can't be found
     employeeBookerQuery :=(
         SELECT COUNT(*)
-        FROM Books,
+        FROM Books
         WHERE floor_input = Books.floor
         AND room_input = Books.room
         AND requestedDate = Books.date
