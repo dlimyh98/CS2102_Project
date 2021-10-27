@@ -393,3 +393,24 @@ $$ LANGUAGE plpgsql;
 CREATE TRIGGER unbook_room_check
 BEFORE DELETE ON Sessions
 FOR EACH ROW EXECUTE FUNCTION unbook_room_check_func();
+
+/*************************************** leave_meeting triggers **************************************/
+CREATE OR REPLACE FUNCTION leave_meeting_check_func() RETURNS TRIGGER AS $$
+DECLARE isMeetingApproved INT;
+BEGIN
+    -- No need to check if employee is in the meeting because the DELETE already checks that the employee is in the meeting
+    -- then it can be deleted
+    isMeetingApproved := (
+        SELECT COUNT(*)
+        FROM Approves
+        WHERE Approves.room = OLD.room
+        AND Approves.floor = OLD.floor
+        AND Approves.date = OLD.date
+        AND Approves.time = OLD.time
+    )
+    IF isMeetingApproved <> 1
+        THEN RETURN NULL;
+    ELSE
+        RETURN OLD;
+END;
+$$ LANGUAGE plpgsql;
