@@ -380,14 +380,35 @@ CREATE OR REPLACE PROCEDURE leave_meeting
 (IN floor_input INT, IN room_input INT, IN requestedDate DATE, IN startHour INT, IN endHour INT, IN employeeID INT)
 AS $$
 DECLARE startHourTracker INT := startHour;
+DECLARE isEmployeeBooker INT;
 BEGIN
     WHILE startHourTracker < endHour LOOP
-        DELETE FROM Joins
-        WHERE floor_input = Joins.floor
-        AND room_input = Joins.room
-        AND requestedDate = Joins.date
-        AND startHourTracker = Joins.time
-        AND employeeID = Joins.eid;
+        isEmployeeBooker := (
+        SELECT COUNT(*)
+        FROM Books
+        WHERE Books.bookerID = employeeID
+        AND Books.floor = floor_input
+        AND Books.room = room_input
+        AND Books.date = requestedDate
+        AND Books.time = startHourTracker
+        );
+        IF isEmployeeBooker <> 1
+            THEN
+                DELETE FROM Joins
+                WHERE floor_input = Joins.floor
+                AND room_input = Joins.room
+                AND requestedDate = Joins.date
+                AND startHourTracker = Joins.time
+                AND employeeID = Joins.eid;
+        ELSE
+            -- Means employee leaving the meeting is booker, cancel the booking
+            -- Hopefully deleting from Sessions cascade down to Joins & Books
+            DELETE FROM Sessions
+            WHERE floor_input = Sessions.floor
+            AND room_input = Sessions.room
+            AND requestedDate = Sessions.date
+            AND startHourTracker = Sessions.time
+        END IF;
         startHourTracker := startHourTracker + 1;
     END LOOP;
 END;
