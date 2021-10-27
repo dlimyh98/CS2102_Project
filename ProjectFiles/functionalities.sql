@@ -198,6 +198,47 @@ END;
 $$ LANGUAGE plpgsql;
 
 
+CREATE OR REPLACE FUNCTION search_room
+(IN capacity INT, IN requestedDate DATE, IN startHour INT, IN endHour INT)
+RETURNS TABLE(floor INT, room INT, departmentID INT, room_capacity INT)
+AS $$
+BEGIN
+    CREATE TEMP TABLE searchDate(date DATE);
+    INSERT INTO searchDate VALUES(requestedDate);
+    CREATE TEMP TABLE timeslots(time INT);
+    INSERT INTO timeslots VALUES (0), (1), (2), (3), (4), (5), (6), (7), (8), (9), (10), (11), (12),
+                                (13), (14), (15), (16), (17), (18), (19), (20), (21), (22), (23), (24);
+    CREATE TEMP TABLE allSlots AS(
+        SELECT meetingRooms.room, meetingRooms.floor, searchDate.date, timeslots.time
+        FROM meetingRooms, searchDate, timeslots
+    );
+    CREATE TEMP TABLE bookedSlots AS(
+        SELECT Books.room, Books.floor, Books.date, Books.time
+        FROM Books
+        WHERE Books.date = requestedDate
+        AND Books.time >= startHour
+        AND Books.time < endHour
+    );
+    CREATE TEMP TABLE availableSlots AS(
+        SELECT allSlots.room, allSlots.floor, allSlots.date, allSlots.time
+        FROM allSlots EXCEPT bookedSlots
+    );
+
+    RETURN QUERY
+    SELECT u2.floor, u2.room, locatedIn.departmentID, u2.new_cap AS room_capacity
+    FROM availableSlots, locatedIn, Updates u1, Updates u2
+    WHERE availableSlots.room = locatedIn.room
+    AND availableSlots.floor = locatedIn.floor
+    AND u1.room = u2.room
+    AND u1.floor = u2.floor
+    AND availableSlots.room = u2.room
+    AND availableSlots.floor = u2.floor
+    AND u2.date > u1.date
+    ;
+END;
+$$ LANGUAGE plpgsql;
+
+
 CREATE OR REPLACE FUNCTION view_manager_report
 (IN startDate DATE, IN employeeID INT)
 RETURNS TABLE(floor INT, room INT, date DATE, startHour INT, managerID int)
