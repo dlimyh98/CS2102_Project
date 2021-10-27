@@ -366,3 +366,54 @@ $$ LANGUAGE plpgsql;
 CREATE TRIGGER change_capacity_remove_bookings
 BEFORE INSERT ON Updates
 FOR EACH ROW EXECUTE FUNCTION change_capacity_remove_bookings_func();
+
+/*********************************** join_meeting triggers ********************************/
+CREATE OR REPLACE FUNCTION join_meeting_availability_func() RETURNS TRIGGER AS $$
+DECLARE employeeInMeetingQuery INT;
+DECLARE isMeetingApproved INT;
+DECLARE participantCount INT;
+DECLARE capacityCount INT;
+BEGIN
+    employeeInMeetingQuery := (
+            SELECT COUNT(*)
+            FROM Joins
+            WHERE Joins.eid = NEW.eid
+            AND Joins.date = NEW.date
+            AND Joins.time = NEW.time
+        );
+    isMeetingApproved := (
+            SELECT COUNT(*)
+            FROM Approves
+            WHERE NEW.floor = Approves.floor
+            AND NEW.room = Approves.room
+            AND NEW.date = Approves.date
+            AND NEW.time = Approves.time
+        );
+    participantCount := (
+            SELECT COUNT(*)
+            FROM Joins
+            WHERE Joins.floor = NEW.floor
+            AND Joins.room = NEW.room
+            AND Joins.date = NEW.date
+            AND Joins.time = NEW.time
+        );
+    capacityCount :=  (
+            SELECT u2.newCap
+            From Updates u1, Updates u2
+            WHERE u2.date > u1.date
+            AND u2.room = u1.room
+            AND u2.floor = u1.floor
+            AND u2.room = NEW.room
+            AND u2.floor = NEW.floor
+        );
+    IF employeeInMeetingQuery <> 1 AND isMeetingApproved = 1  AND participantCount < capacityCount
+        THEN RETURN NEW;
+    ELSE
+        THEN RETURN NULL;
+    END IF;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE TRIGGER join_meeting_availability
+BEFORE INSERT ON Joins
+FOR EACH ROW EXECUTE FUNCTION join_meeting_availability_func();

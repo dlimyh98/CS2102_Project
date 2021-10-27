@@ -391,3 +391,39 @@ BEGIN
 
 END;
 $$ LANGUAGE plpgsql;
+
+
+CREATE OR REPLACE PROCEDURE join_meeting
+(IN floor_input INT, IN room_input INT, IN requestedDate INT, IN startHour INT, IN endHour INT, IN employeeID INT)
+AS $$
+DECLARE startHourTracker INT := startHour;
+DECLARE employeeInMeetingQuery INT;
+DECLARE isEmployeeResigned BOOLEAN;
+DECLARE doesEmployeeHaveFever BOOLEAN;
+BEGIN
+    doesEmployeeHaveFever := (
+        SELECT fever
+        FROM healthDeclaration
+        WHERE healthDeclaration.eid = employeeID
+    );
+
+    isEmployeeResigned := (
+        SELECT isResigned
+        FROM Employees
+        WHERE Employees.eid  = employeedID
+    );
+
+    IF doesEmployeeHaveFever = TRUE
+        THEN RAISE EXCEPTION 'Employee has fever, not allowed to join the meeting.';
+        RETURN;
+    ELSIF isEmployeeResigned = TRUE
+        THEN RAISE EXCEPTION 'Employee has resigned, is not able join the meeting';
+        RETURN;
+    END IF;
+
+    WHILE startHourTracker < endHour LOOP
+        INSERT INTO Joins VALUES(employeeID, room_input, floor_input, requestedDate, startHourTracker);
+        startHourTracker := startHourTracker + 1;
+    END LOOP;
+END;
+$$ LANGUAGE plpgsql;
