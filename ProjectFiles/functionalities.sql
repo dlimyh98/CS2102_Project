@@ -364,7 +364,7 @@ CREATE OR REPLACE PROCEDURE unbook_room
 AS $$
 DECLARE startHourTracker INT := startHour;
 BEGIN
-    WHILE startHourTracker < endHour
+    WHILE startHourTracker < endHour LOOP
         DELETE FROM Sessions
         WHERE floor_input = Sessions.floor
         AND room_input = Sessions.room
@@ -381,7 +381,7 @@ CREATE OR REPLACE PROCEDURE leave_meeting
 AS $$
 DECLARE startHourTracker INT := startHour
 BEGIN
-    WHILE startHourTracker < endHour
+    WHILE startHourTracker < endHour LOOP
         DELETE FROM Joins
         WHERE floor_input = Joins.floor
         AND room_input = Joins.room
