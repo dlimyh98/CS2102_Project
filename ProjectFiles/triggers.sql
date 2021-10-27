@@ -410,7 +410,8 @@ BEGIN
     IF employeeInMeetingQuery <> 1 AND isMeetingApproved = 1 AND participantCount < capacityCount
         THEN RETURN NEW;
     ELSE
-        THEN RETURN NULL;
+        RAISE EXCEPTION 'Employee is not allowed to join the meeting';
+        RETURN NULL;
     END IF;
 END;
 $$ LANGUAGE plpgsql;
