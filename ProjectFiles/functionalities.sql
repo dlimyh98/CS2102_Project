@@ -220,8 +220,9 @@ BEGIN
         AND Books.time < endHour
     );
     CREATE TEMP TABLE availableSlots AS(
-        SELECT allSlots.room, allSlots.floor, allSlots.date, allSlots.time
-        FROM allSlots EXCEPT bookedSlots
+        SELECT * FROM allSlots
+        EXCEPT
+        SELECT * FROM bookedSlots
     );
 
     RETURN QUERY
