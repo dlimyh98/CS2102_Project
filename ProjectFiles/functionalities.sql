@@ -251,6 +251,7 @@ BEGIN
     AND availableSlots.room = u2.room
     AND availableSlots.floor = u2.floor
     AND u2.date > u1.date
+    AND requestedDate >= u2.date
     ;
 END;
 $$ LANGUAGE plpgsql;

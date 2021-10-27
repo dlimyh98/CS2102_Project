@@ -401,6 +401,7 @@ BEGIN
             SELECT u2.newCap
             From Updates u1, Updates u2
             WHERE u2.date > u1.date
+            AND NEW.date >= u2.date
             AND u2.room = u1.room
             AND u2.floor = u1.floor
             AND u2.room = NEW.room
