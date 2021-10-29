@@ -258,7 +258,7 @@ $$ LANGUAGE plpgsql;
 
 CREATE OR REPLACE FUNCTION view_manager_report
 (IN startDate DATE, IN employeeID INT)
-RETURNS TABLE(floor INT, room INT, date DATE, startHour INT, managerID int)
+RETURNS TABLE(floor INT, room INT, date DATE, startHour INT, bookerID int)
 AS $$
 DECLARE employeeManagerQuery INT;
 DECLARE employeeDepartmentQuery INT;
@@ -390,5 +390,39 @@ BEGIN
     FROM Books
     WHERE Books.bookerID = employeeID AND Books.date >= startDate
     ORDER BY Books.date ASC, Books.time ASC;
+END;
+$$ LANGUAGE plpgsql;
+
+
+CREATE OR REPLACE PROCEDURE unbook_room
+(IN floor_input INT, IN room_input INT, IN requestedDate DATE, IN startHour INT, IN endHour INT, IN employeeID INT)
+AS $$
+DECLARE employeeBookerQuery INT;
+BEGIN
+    -- To make sure that condition to remove booking is met, e.g. employee making the booking, booking exist and booking status
+    -- don't need to check if employee resigned as the booking will already been deleted and can't be found
+    employeeBookerQuery :=(
+        SELECT COUNT(*)
+        FROM Books
+        WHERE floor_input = Books.floor
+        AND room_input = Books.room
+        AND requestedDate = Books.date
+        AND startHour = Books.time
+        AND employeeID = Books.bookerID
+        AND Books.approveStatus = 0
+    );
+    IF employeeBookerQuery <> 1
+        THEN RAISE EXCEPTION 'Employee not the booker or booking cannot be unbooked.';
+        RETURN;
+    END IF;
+
+    -- Don't think need trigger or anything because Joins & Books table has ON DELETE CASCADE
+    -- Therefore have to delete from Sessions table
+    DELETE FROM Sessions
+    WHERE floor_input = Sessions.floor
+    AND room_input = Sessions.room
+    AND requestedDate = Sessions.date
+    AND startHour = Sessions.time;
+
 END;
 $$ LANGUAGE plpgsql;
