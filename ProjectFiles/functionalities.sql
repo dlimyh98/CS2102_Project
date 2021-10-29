@@ -258,7 +258,7 @@ $$ LANGUAGE plpgsql;
 
 CREATE OR REPLACE FUNCTION view_manager_report
 (IN startDate DATE, IN employeeID INT)
-RETURNS TABLE(floor INT, room INT, date DATE, startHour INT, managerID int)
+RETURNS TABLE(floor INT, room INT, date DATE, startHour INT, bookerID int)
 AS $$
 DECLARE employeeManagerQuery INT;
 DECLARE employeeDepartmentQuery INT;
@@ -374,7 +374,7 @@ BEGIN
         AND requestedDate = Books.date
         AND startHour = Books.time
         AND employeeID = Books.bookerID
-        AND Books.approve_meeting = 0
+        AND Books.approveStatus = 0
     );
     IF employeeBookerQuery <> 1
         THEN RAISE EXCEPTION 'Employee not the booker or booking cannot be unbooked.';
@@ -387,7 +387,7 @@ BEGIN
     WHERE floor_input = Sessions.floor
     AND room_input = Sessions.room
     AND requestedDate = Sessions.date
-    AND startHour = Sessions.time
+    AND startHour = Sessions.time;
 
 END;
 $$ LANGUAGE plpgsql;
