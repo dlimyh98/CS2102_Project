@@ -359,6 +359,23 @@ END;
 $$ LANGUAGE plpgsql;
 
 
+CREATE OR REPLACE FUNCTION view_booking_report
+(IN startDate DATE, IN employeeID INTEGER)
+RETURNS TABLE (floorNumber INTEGER, roomNumber INTEGER, dateBooked DATE, startHour INTEGER, isApproved BOOLEAN) AS $$
+BEGIN
+    RETURN QUERY
+    SELECT room, floor, date, time, CASE 
+        WHEN approveStatus = 0 THEN FALSE
+        WHEN approveStatus = 1 THEN FALSE
+        WHEN approveStatus = 2 THEN TRUE
+        END AS isApproved
+    FROM Books
+    WHERE Books.bookerID = employeeID AND Books.date >= startDate
+    ORDER BY Books.date ASC, Books.time ASC;
+END;
+$$ LANGUAGE plpgsql;
+
+
 CREATE OR REPLACE PROCEDURE unbook_room
 (IN floor_input INT, IN room_input INT, IN requestedDate DATE, IN startHour INT, IN endHour INT, IN employeeID INT)
 AS $$
