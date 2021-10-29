@@ -357,3 +357,38 @@ BEGIN
     ORDER BY (COUNT(*)-numberOfDays) DESC;
 END;
 $$ LANGUAGE plpgsql;
+
+
+CREATE OR REPLACE FUNCTION view_booking_report
+(IN startDate DATE, IN employeeID INTEGER)
+RETURNS TABLE (floorNumber INTEGER, roomNumber INTEGER, dateBooked DATE, startHour INTEGER, isApproved INTEGER) AS $$
+DECLARE curs CURSOR FOR (SELECT * FROM Books WHERE Books.bookerID = employeeID AND Books.date >= startDate);
+r1 RECORD;
+BEGIN
+    OPEN curs;
+    LOOP
+        FETCH curs INTO r1;
+        EXIT WHEN NOT FOUND;
+        floorNumber := r1.floor;
+        roomNumber := r1.room;
+        dateBooked := r1.date;
+        startHour := r1.time;
+        isApproved := r1.approveStatus;
+        RETURN NEXT;
+    END LOOP;
+    CLOSE curs;
+    RETURN;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE OR REPLACE FUNCTION view_booking_report
+(IN startDate DATE, IN employeeID INTEGER)
+RETURNS TABLE (floorNumber INTEGER, roomNumber INTEGER, dateBooked DATE, startHour INTEGER, isApproved INTEGER) AS $$
+BEGIN
+    RETURN QUERY
+    SELECT room, floor, date, time, approveStatus
+    FROM Books
+    WHERE Books.bookerID = employeeID AND Books.date >= startDate
+    ORDER BY Books.date ASC, Books.time ASC;
+END;
+$$ LANGUAGE plpgsql;
