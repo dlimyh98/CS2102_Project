@@ -25,6 +25,7 @@ DELETE FROM meetingRooms;
 DELETE FROM locatedIn;
 DELETE FROM Updates;
 
+--Need to add one by one cause of some bug
 CALL add_room(1, 1, 'firstRoom', 5, 3, 2);
 CALL add_room(1, 2, 'secondRoom', 5, 3, 2);
 CALL add_room(1, 3, 'thirdRoom', 5, 3, 2);
