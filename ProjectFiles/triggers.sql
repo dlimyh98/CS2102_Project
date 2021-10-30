@@ -418,3 +418,57 @@ $$ LANGUAGE plpgsql;
 CREATE TRIGGER join_meeting_availability
 BEFORE INSERT ON Joins
 FOR EACH ROW EXECUTE FUNCTION join_meeting_availability_func();
+
+/**************************************** unbook_room triggers *****************************************/
+CREATE OR REPLACE FUNCTION unbook_room_check_func() RETURNS TRIGGER AS $$
+DECLARE employeeBookerQuery INT;
+BEGIN
+    -- To make sure that condition to remove booking is met, e.g. employee making the booking, booking exist and booking status
+    -- don't need to check if employee resigned as the booking will already been deleted and can't be found
+    employeeBookerQuery := (
+        SELECT COUNT(*)
+        FROM Books
+        WHERE OLD.floor = Books.floor
+        AND OLD.room = Books.room
+        AND OLD.date = Books.date
+        AND OLD.time = Books.time
+        AND OLD.eid = Books.bookerID
+        AND Books.approve_meeting = 0
+    );
+    IF employeeBookerQuery <> 1
+        THEN RETURN NULL;
+    ELSE
+        RETURN OLD;
+    END IF;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE TRIGGER unbook_room_check
+BEFORE DELETE ON Sessions
+FOR EACH ROW EXECUTE FUNCTION unbook_room_check_func();
+
+/*************************************** leave_meeting triggers **************************************/
+CREATE OR REPLACE FUNCTION leave_meeting_check_func() RETURNS TRIGGER AS $$
+DECLARE isMeetingApproved INT;
+BEGIN
+    -- No need to check if employee is in the meeting because the DELETE already checks that the employee is in the meeting
+    -- then it can be deleted
+    isMeetingApproved := (
+        SELECT COUNT(*)
+        FROM Approves
+        WHERE Approves.room = OLD.room
+        AND Approves.floor = OLD.floor
+        AND Approves.date = OLD.date
+        AND Approves.time = OLD.time
+    );
+    IF isMeetingApproved <> 1
+        THEN RETURN NULL;
+    ELSE
+        RETURN OLD;
+    END IF;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE TRIGGER leave_meeting_check
+BEFORE DELETE ON Joins
+FOR EACH ROW EXECUTE FUNCTION leave_meeting_check_func();
