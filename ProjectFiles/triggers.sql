@@ -398,7 +398,7 @@ BEGIN
             AND Joins.time = NEW.time
         );
     capacityCount :=  (
-            SELECT u2.newCap
+            SELECT newCap
             From Updates
             WHERE NEW.date >= Updates.date
             AND Updates.room = NEW.room
@@ -406,7 +406,7 @@ BEGIN
             ORDER BY Updates.date DESC
             LIMIT 1
         );
-    IF employeeInMeetingQuery <> 1 AND isMeetingApproved = 1 AND participantCount < capacityCount
+    IF employeeInMeetingQuery <> 1 AND isMeetingApproved <> 1 AND participantCount < capacityCount
         THEN RETURN NEW;
     ELSE
         RAISE EXCEPTION 'Employee is not allowed to join the meeting';
@@ -472,6 +472,7 @@ $$ LANGUAGE plpgsql;
 CREATE TRIGGER leave_meeting_check
 BEFORE DELETE ON Joins
 FOR EACH ROW EXECUTE FUNCTION leave_meeting_check_func();
+
 
 /*************************************** declare_health triggers **************************************/
 CREATE OR REPLACE FUNCTION declare_health_check_func() RETURNS TRIGGER AS $$
