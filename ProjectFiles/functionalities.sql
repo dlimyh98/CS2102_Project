@@ -486,7 +486,7 @@ BEGIN
             WHERE floor_input = Sessions.floor
             AND room_input = Sessions.room
             AND requestedDate = Sessions.date
-            AND startHourTracker = Sessions.time
+            AND startHourTracker = Sessions.time;
         END IF;
         startHourTracker := startHourTracker + 1;
     END LOOP;
