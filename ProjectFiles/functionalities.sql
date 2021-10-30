@@ -240,17 +240,27 @@ BEGIN
         EXCEPT
         SELECT * FROM bookedSlots
     );
+    CREATE TEMP TABLE latestCapacityUpdate AS(
+        SELECT Updates.room, Updates.floor, MAX(Updates.date)
+        FROM Updates
+        WHERE requestedDate >= Updates.date
+        GROUP BY Updates.room, Updates.floor
+    );
+    CREATE TEMP TABLE correctLatestCapacity AS(
+        SELECT Updates.room, Updates.floor, Updates.date, Updates.newCap
+        FROM Updates, latestCapacity
+        WHERE Updates.room = latestCapacity.room
+        AND Updates.floor = latestCapacity.floor
+        AND Updates.date = latestCapacity.date
+    );
 
     RETURN QUERY
-    SELECT u2.floor, u2.room, locatedIn.departmentID, u2.new_cap AS room_capacity
-    FROM availableSlots, locatedIn, Updates u1, Updates u2
+    SELECT correctLatestCapacity.floor, correctLatestCapacity.room, locatedIn.departmentID, correctLatestCapacity.newCap AS room_capacity
+    FROM availableSlots, locatedIn, correctLatestCapacity
     WHERE availableSlots.room = locatedIn.room
     AND availableSlots.floor = locatedIn.floor
-    AND u1.room = u2.room
-    AND u1.floor = u2.floor
-    AND availableSlots.room = u2.room
-    AND availableSlots.floor = u2.floor
-    AND u2.date > u1.date
+    AND availableSlots.room = correctLatestCapacity.room
+    AND availableSlots.floor = correctLatestCapacity.floor
     ;
 END;
 $$ LANGUAGE plpgsql;
@@ -406,5 +416,41 @@ BEGIN
     AND requestedDate = Sessions.date
     AND startHour = Sessions.time;
 
+END;
+$$ LANGUAGE plpgsql;
+
+
+CREATE OR REPLACE PROCEDURE join_meeting
+(IN floor_input INT, IN room_input INT, IN requestedDate INT, IN startHour INT, IN endHour INT, IN employeeID INT)
+AS $$
+DECLARE startHourTracker INT := startHour;
+DECLARE employeeInMeetingQuery INT;
+DECLARE isEmployeeResigned BOOLEAN;
+DECLARE doesEmployeeHaveFever BOOLEAN;
+BEGIN
+    doesEmployeeHaveFever := (
+        SELECT fever
+        FROM healthDeclaration
+        WHERE healthDeclaration.eid = employeeID
+    );
+
+    isEmployeeResigned := (
+        SELECT isResigned
+        FROM Employees
+        WHERE Employees.eid  = employeedID
+    );
+
+    IF doesEmployeeHaveFever = TRUE
+        THEN RAISE EXCEPTION 'Employee has fever, not allowed to join the meeting.';
+        RETURN;
+    ELSIF isEmployeeResigned = TRUE
+        THEN RAISE EXCEPTION 'Employee has resigned, is not able join the meeting';
+        RETURN;
+    END IF;
+
+    WHILE startHourTracker < endHour LOOP
+        INSERT INTO Joins VALUES(employeeID, room_input, floor_input, requestedDate, startHourTracker);
+        startHourTracker := startHourTracker + 1;
+    END LOOP;
 END;
 $$ LANGUAGE plpgsql;
