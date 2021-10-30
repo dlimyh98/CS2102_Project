@@ -420,7 +420,7 @@ $$ LANGUAGE plpgsql;
 
 
 CREATE OR REPLACE PROCEDURE join_meeting
-(IN floor_input INT, IN room_input INT, IN requestedDate INT, IN startHour INT, IN endHour INT, IN employeeID INT)
+(IN floor_input INT, IN room_input INT, IN requestedDate DATE, IN startHour INT, IN endHour INT, IN employeeID INT)
 AS $$
 DECLARE startHourTracker INT := startHour;
 DECLARE employeeInMeetingQuery INT;
@@ -436,7 +436,7 @@ BEGIN
     isEmployeeResigned := (
         SELECT isResigned
         FROM Employees
-        WHERE Employees.eid  = employeedID
+        WHERE Employees.eid  = employeeID
     );
 
     IF doesEmployeeHaveFever = TRUE
