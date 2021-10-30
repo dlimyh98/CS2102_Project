@@ -268,7 +268,7 @@ $$ LANGUAGE plpgsql;
 
 CREATE OR REPLACE FUNCTION view_manager_report
 (IN startDate DATE, IN employeeID INT)
-RETURNS TABLE(floor INT, room INT, date DATE, startHour INT, managerID int)
+RETURNS TABLE(floor INT, room INT, date DATE, startHour INT, bookerID int)
 AS $$
 DECLARE employeeManagerQuery INT;
 DECLARE employeeDepartmentQuery INT;
@@ -369,6 +369,23 @@ END;
 $$ LANGUAGE plpgsql;
 
 
+CREATE OR REPLACE FUNCTION view_booking_report
+(IN startDate DATE, IN employeeID INTEGER)
+RETURNS TABLE (floorNumber INTEGER, roomNumber INTEGER, dateBooked DATE, startHour INTEGER, isApproved BOOLEAN) AS $$
+BEGIN
+    RETURN QUERY
+    SELECT room, floor, date, time, CASE 
+        WHEN approveStatus = 0 THEN FALSE
+        WHEN approveStatus = 1 THEN FALSE
+        WHEN approveStatus = 2 THEN TRUE
+        END AS isApproved
+    FROM Books
+    WHERE Books.bookerID = employeeID AND Books.date >= startDate
+    ORDER BY Books.date ASC, Books.time ASC;
+END;
+$$ LANGUAGE plpgsql;
+
+
 CREATE OR REPLACE PROCEDURE unbook_room
 (IN floor_input INT, IN room_input INT, IN requestedDate DATE, IN startHour INT, IN endHour INT, IN employeeID INT)
 AS $$
@@ -384,7 +401,7 @@ BEGIN
         AND requestedDate = Books.date
         AND startHour = Books.time
         AND employeeID = Books.bookerID
-        AND Books.approve_meeting = 0
+        AND Books.approveStatus = 0
     );
     IF employeeBookerQuery <> 1
         THEN RAISE EXCEPTION 'Employee not the booker or booking cannot be unbooked.';
@@ -397,7 +414,7 @@ BEGIN
     WHERE floor_input = Sessions.floor
     AND room_input = Sessions.room
     AND requestedDate = Sessions.date
-    AND startHour = Sessions.time
+    AND startHour = Sessions.time;
 
 END;
 $$ LANGUAGE plpgsql;
