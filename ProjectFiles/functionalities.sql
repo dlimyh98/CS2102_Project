@@ -268,29 +268,29 @@ BEGIN
     CREATE TEMP TABLE timeslots(time INT);
     INSERT INTO timeslots VALUES (0), (1), (2), (3), (4), (5), (6), (7), (8), (9), (10), (11), (12),
                                 (13), (14), (15), (16), (17), (18), (19), (20), (21), (22), (23), (24);
-    CREATE TEMP TABLE allSlots AS(
+    CREATE TEMP TABLE allSlots ON COMMIT DROP AS(
         SELECT meetingRooms.room, meetingRooms.floor, searchDate.date, timeslots.time
         FROM meetingRooms, searchDate, timeslots
     );
-    CREATE TEMP TABLE bookedSlots AS(
+    CREATE TEMP TABLE bookedSlots ON COMMIT DROP AS(
         SELECT Books.room, Books.floor, Books.date, Books.time
         FROM Books
         WHERE Books.date = requestedDate
         AND Books.time >= startHour
         AND Books.time < endHour
     );
-    CREATE TEMP TABLE availableSlots AS(
+    CREATE TEMP TABLE availableSlots ON COMMIT DROP AS(
         SELECT * FROM allSlots
         EXCEPT
         SELECT * FROM bookedSlots
     );
-    CREATE TEMP TABLE latestCapacityUpdate AS(
+    CREATE TEMP TABLE latestCapacityUpdate ON COMMIT DROP AS(
         SELECT Updates.room, Updates.floor, MAX(Updates.date)
         FROM Updates
         WHERE requestedDate >= Updates.date
         GROUP BY Updates.room, Updates.floor
     );
-    CREATE TEMP TABLE correctLatestCapacity AS(
+    CREATE TEMP TABLE correctLatestCapacity ON COMMIT DROP AS(
         SELECT Updates.room, Updates.floor, Updates.date, Updates.newCap
         FROM Updates, latestCapacity
         WHERE Updates.room = latestCapacity.room
@@ -514,6 +514,7 @@ CREATE OR REPLACE PROCEDURE leave_meeting
 AS $$
 DECLARE startHourTracker INT := startHour;
 DECLARE isEmployeeBooker INT;
+DECLARE isMeetingApproved INT;
 BEGIN
     WHILE startHourTracker < endHour LOOP
         isEmployeeBooker := (
@@ -525,7 +526,15 @@ BEGIN
         AND Books.date = requestedDate
         AND Books.time = startHourTracker
         );
-        IF isEmployeeBooker <> 1
+        isMeetingApproved := (
+        SELECT COUNT(*)
+        FROM Approves
+        WHERE Approves.room = room_input
+        AND Approves.floor = floor_input
+        AND Approves.date = requestedDate
+        AND Approves.time = startHourTracker
+        );
+        IF isEmployeeBooker <> 1 AND isMeetingApproved <> 1
             THEN
                 DELETE FROM Joins
                 WHERE floor_input = Joins.floor
