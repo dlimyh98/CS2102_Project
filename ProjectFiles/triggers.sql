@@ -472,3 +472,48 @@ $$ LANGUAGE plpgsql;
 CREATE TRIGGER leave_meeting_check
 BEFORE DELETE ON Joins
 FOR EACH ROW EXECUTE FUNCTION leave_meeting_check_func();
+
+
+/*************************************** declare_health triggers **************************************/
+CREATE OR REPLACE FUNCTION declare_health_check_func() RETURNS TRIGGER AS $$
+DECLARE startDate DATE := NEW.date;
+DECLARE endDate DATE := NEW.date + 7;
+BEGIN
+    IF NEW.fever = FALSE 
+        THEN RETURN NULL;
+    END IF;
+    -- Employees in close contact with employee with fever
+    CREATE TEMP TABLE employeesToBeRemoved ON COMMIT DROP AS (
+        SELECT * FROM contact_tracing(NEW.eid, NEW.date)
+    );
+    -- All future meetings booked by employee with fever
+    CREATE TEMP TABLE bookedMeetingsToBeRemoved ON COMMIT DROP AS (
+        SELECT room, floor, date, time
+        FROM Books
+        WHERE bookerID = NEW.eid AND date >= startDate
+    );
+    -- Deletes close contact employees from future meetings in the next 7 days
+    DELETE FROM Joins
+    WHERE eid IN (SELECT employeeID FROM employeesToBeRemoved) AND 
+    date >= startDate AND 
+    date <= endDate;
+    -- Deletes employee with fever from all future meeting room bookings
+    DELETE FROM Joins
+    WHERE eid = NEW.eid AND date >= startDate;
+    -- Deletes all future meetings booked by employee with fever
+    DELETE FROM Sessions
+    WHERE CTID IN (SELECT Sessions.CTID
+                    FROM Sessions JOIN bookedMeetingsToBeRemoved 
+                    ON (Sessions.room = bookedMeetingsToBeRemoved.room AND
+                        Sessions.floor = bookedMeetingsToBeRemoved.floor AND 
+                        Sessions.date = bookedMeetingsToBeRemoved.date AND 
+                        Sessions.time = bookedMeetingsToBeRemoved.time)
+                    );
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE TRIGGER declare_health_check
+BEFORE INSERT ON healthDeclaration
+FOR EACH ROW EXECUTE FUNCTION declare_health_check_func();
+

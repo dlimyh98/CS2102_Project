@@ -32,6 +32,7 @@ CREATE OR REPLACE PROCEDURE add_room
 AS $$
 DECLARE employeeManagerQuery INT;
 DECLARE employeeDepartmentQuery INT;
+DECLARE isEmployeeResigned BOOLEAN;
 BEGIN
     -- Checks if employee is a manager
     employeeManagerQuery := (
@@ -45,12 +46,21 @@ BEGIN
         FROM worksIn
         WHERE (eid = employeeID AND did = did_input)
     );
+    -- Checks if employee is resigned
+    isEmployeeResigned := (
+        SELECT isResigned
+        FROM Employees
+        WHERE Employees.eid = employeeID
+    );
 
     IF employeeManagerQuery <> 1
         THEN RAISE EXCEPTION 'Employee is not authorized to make a change in room capacity.';
         RETURN;
     ELSIF employeeDepartmentQuery = 0
         THEN RAISE EXCEPTION 'Manager does not belong to same department as Meeting Room.';
+        RETURN;
+    ELSIF isEmployeeResigned = TRUE
+        THEN RAISE EXCEPTION 'Employee has resigned, is not able to make a booking.';
         RETURN;
     END IF;
 
@@ -164,6 +174,40 @@ BEGIN
     END IF;
     
     INSERT INTO healthDeclaration VALUES (date_input, temperature_input, fever, eid_input);
+END;
+$$ LANGUAGE plpgsql;
+
+
+CREATE OR REPLACE FUNCTION contact_tracing
+(IN eid_input INTEGER, IN date_input DATE)
+RETURNS TABLE (employeeID INT) AS $$
+DECLARE startDate DATE := date_input - 3;
+DECLARE endDate DATE := date_input - 1;
+BEGIN
+    -- Meetings with close contacts in past 3 days
+    CREATE TEMP TABLE meetingCloseContacts ON COMMIT DROP AS (
+        SELECT room, floor, date, time
+        FROM Joins
+        WHERE date >= startDate AND date <= endDate AND eid_input = eid
+    );
+    -- Approved meetings with close contacts in past 3 days
+    CREATE TEMP TABLE approvedMeetingCloseContacts ON COMMIT DROP AS (
+        SELECT meetingCloseContacts.room, meetingCloseContacts.floor, meetingCloseContacts.date, meetingCloseContacts.time
+        FROM meetingCloseContacts JOIN Approves
+        ON meetingCloseContacts.room = Approves.room AND
+        meetingCloseContacts.floor = Approves.floor AND
+        meetingCloseContacts.date = Approves.date AND
+        meetingCloseContacts.time = Approves.time 
+    );
+    -- Return list of employees in close contact with employee with fever in past 3 days
+    RETURN QUERY 
+    SELECT DISTINCT eid
+    FROM Joins JOIN approvedMeetingCloseContacts
+    ON Joins.room = approvedMeetingCloseContacts.room AND 
+    Joins.floor = approvedMeetingCloseContacts.floor AND
+    Joins.date = approvedMeetingCloseContacts.date AND
+    Joins.time = approvedMeetingCloseContacts.time
+    WHERE eid <> eid_input;
 END;
 $$ LANGUAGE plpgsql;
 
@@ -323,6 +367,7 @@ CREATE OR REPLACE PROCEDURE change_capacity
 AS $$
 DECLARE employeeManagerQuery INT;
 DECLARE employeeDepartmentQuery INT;
+DECLARE isEmployeeResigned BOOLEAN;
 BEGIN
     -- Checks if employee is a manager
     employeeManagerQuery := (
@@ -337,12 +382,21 @@ BEGIN
         JOIN (SELECT did FROM worksIn WHERE eid = employeeID) AS t2
         ON t1.did = t2.did
     );
+    -- Checks if employee is resigned
+    isEmployeeResigned := (
+        SELECT isResigned
+        FROM Employees
+        WHERE Employees.eid = employeeID
+    );
 
     IF employeeManagerQuery <> 1
         THEN RAISE EXCEPTION 'Employee is not authorized to make a change in room capacity.';
         RETURN;
     ELSIF employeeDepartmentQuery = 0
         THEN RAISE EXCEPTION 'Manager does not belong to same department as Meeting Room.';
+        RETURN;
+    ELSIF isEmployeeResigned = TRUE
+        THEN RAISE EXCEPTION 'Manager has resigned, is not able to change room capacity.';
         RETURN;
     END IF;
 
