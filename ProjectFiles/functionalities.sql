@@ -260,7 +260,7 @@ $$ LANGUAGE plpgsql;
 
 CREATE OR REPLACE FUNCTION search_room
 (IN capacity INT, IN requestedDate DATE, IN startHour INT, IN endHour INT)
-RETURNS TABLE(floor INT, room INT, departmentID INT, room_capacity INT)
+RETURNS TABLE(floor INT, room INT, departmentID INT, room_capacity INT, availableTime INT)
 AS $$
 BEGIN
     CREATE TEMP TABLE searchDate(date DATE);
@@ -281,30 +281,34 @@ BEGIN
     );
     CREATE TEMP TABLE availableSlots ON COMMIT DROP AS(
         SELECT * FROM allSlots
+        WHERE allSlots.time >= startHour
+        AND allSlots.time < endHour
         EXCEPT
         SELECT * FROM bookedSlots
     );
     CREATE TEMP TABLE latestCapacityUpdate ON COMMIT DROP AS(
-        SELECT Updates.room, Updates.floor, MAX(Updates.date)
+        SELECT Updates.room, Updates.floor, MAX(Updates.date) AS date
         FROM Updates
         WHERE requestedDate >= Updates.date
         GROUP BY Updates.room, Updates.floor
     );
     CREATE TEMP TABLE correctLatestCapacity ON COMMIT DROP AS(
         SELECT Updates.room, Updates.floor, Updates.date, Updates.newCap
-        FROM Updates, latestCapacity
-        WHERE Updates.room = latestCapacity.room
-        AND Updates.floor = latestCapacity.floor
-        AND Updates.date = latestCapacity.date
+        FROM Updates, latestCapacityUpdate
+        WHERE Updates.room = latestCapacityUpdate.room
+        AND Updates.floor = latestCapacityUpdate.floor
+        AND Updates.date = latestCapacityUpdate.date
     );
 
     RETURN QUERY
-    SELECT correctLatestCapacity.floor, correctLatestCapacity.room, locatedIn.departmentID, correctLatestCapacity.newCap AS room_capacity
+    SELECT correctLatestCapacity.floor, correctLatestCapacity.room, locatedIn.did, correctLatestCapacity.newCap AS room_capacity, availableSlots.time
     FROM availableSlots, locatedIn, correctLatestCapacity
     WHERE availableSlots.room = locatedIn.room
     AND availableSlots.floor = locatedIn.floor
     AND availableSlots.room = correctLatestCapacity.room
     AND availableSlots.floor = correctLatestCapacity.floor
+    AND correctLatestCapacity.newCap <= capacity
+    ORDER BY correctLatestCapacity.newCap ASC, correctLatestCapacity.floor ASC, correctLatestCapacity.room ASC, availableSlots.time ASC
     ;
 END;
 $$ LANGUAGE plpgsql;
@@ -356,7 +360,7 @@ BEGIN
         AND employeeInMeetings.floor = Approves.floor
         AND employeeInMeetings.date = Approves.date
         AND employeeInMeetings.time = Approves.time
-        AND startDate > employeeInMeetings.date
+        AND Approves.date >= startDate
         ORDER BY Approves.date ASC, Approves.time ASC
     ;   
 END;
@@ -443,32 +447,35 @@ $$ LANGUAGE plpgsql;
 CREATE OR REPLACE PROCEDURE unbook_room
 (IN floor_input INT, IN room_input INT, IN requestedDate DATE, IN startHour INT, IN endHour INT, IN employeeID INT)
 AS $$
+DECLARE startHourTracker INT := startHour;
 DECLARE employeeBookerQuery INT;
 BEGIN
     -- To make sure that condition to remove booking is met, e.g. employee making the booking, booking exist and booking status
     -- don't need to check if employee resigned as the booking will already been deleted and can't be found
-    employeeBookerQuery :=(
-        SELECT COUNT(*)
-        FROM Books
-        WHERE floor_input = Books.floor
-        AND room_input = Books.room
-        AND requestedDate = Books.date
-        AND startHour = Books.time
-        AND employeeID = Books.bookerID
-        AND Books.approveStatus = 0
-    );
-    IF employeeBookerQuery <> 1
-        THEN RAISE EXCEPTION 'Employee not the booker or booking cannot be unbooked.';
-        RETURN;
-    END IF;
-
-    -- Don't think need trigger or anything because Joins & Books table has ON DELETE CASCADE
-    -- Therefore have to delete from Sessions table
-    DELETE FROM Sessions
-    WHERE floor_input = Sessions.floor
-    AND room_input = Sessions.room
-    AND requestedDate = Sessions.date
-    AND startHour = Sessions.time;
+    WHILE startHourTracker < endHour LOOP
+        employeeBookerQuery :=(
+            SELECT COUNT(*)
+            FROM Books
+            WHERE floor_input = Books.floor
+            AND room_input = Books.room
+            AND requestedDate = Books.date
+            AND startHourTracker = Books.time
+            AND employeeID = Books.bookerID
+            AND Books.approveStatus = 0
+        );
+        -- Don't think need trigger or anything because Joins & Books table has ON DELETE CASCADE
+        -- Therefore have to delete from Sessions table
+        IF employeeBookerQuery = 1
+            THEN DELETE FROM Sessions
+            WHERE floor_input = Sessions.floor
+            AND room_input = Sessions.room
+            AND requestedDate = Sessions.date
+            AND startHourTracker = Sessions.time;
+        ELSE
+            RAISE WARNING 'Employee not the booker or booking cannot be removed.';
+        END IF;
+        startHourTracker = startHourTracker  + 1;
+    END LOOP;
 END;
 $$ LANGUAGE plpgsql;
 
@@ -515,26 +522,37 @@ AS $$
 DECLARE startHourTracker INT := startHour;
 DECLARE isEmployeeBooker INT;
 DECLARE isMeetingApproved INT;
+DECLARE isEmployeeInMeeting INT;
 BEGIN
     WHILE startHourTracker < endHour LOOP
         isEmployeeBooker := (
-        SELECT COUNT(*)
-        FROM Books
-        WHERE Books.bookerID = employeeID
-        AND Books.floor = floor_input
-        AND Books.room = room_input
-        AND Books.date = requestedDate
-        AND Books.time = startHourTracker
+            SELECT COUNT(*)
+            FROM Books
+            WHERE Books.bookerID = employeeID
+            AND Books.floor = floor_input
+            AND Books.room = room_input
+            AND Books.date = requestedDate
+            AND Books.time = startHourTracker
         );
         isMeetingApproved := (
-        SELECT COUNT(*)
-        FROM Approves
-        WHERE Approves.room = room_input
-        AND Approves.floor = floor_input
-        AND Approves.date = requestedDate
-        AND Approves.time = startHourTracker
+            SELECT COUNT(*)
+            FROM Approves
+            WHERE Approves.room = room_input
+            AND Approves.floor = floor_input
+            AND Approves.date = requestedDate
+            AND Approves.time = startHourTracker
         );
-        IF isEmployeeBooker <> 1 AND isMeetingApproved <> 1
+        isEmployeeInMeeting := (
+            SELECT COUNT(*)
+            FROM Joins
+            WHERE Joins.room = room_input
+            AND Joins.floor = floor_input
+            AND Joins.date = requestedDate
+            AND Joins.time = startHourTracker
+            AND Joins.eid = employeeID
+        );
+        -- Don't need check for resigned as it should have been removed already
+        IF isEmployeeBooker <> 1 AND isMeetingApproved <> 1 AND isEmployeeInMeeting = 1
             THEN
                 DELETE FROM Joins
                 WHERE floor_input = Joins.floor
@@ -542,14 +560,17 @@ BEGIN
                 AND requestedDate = Joins.date
                 AND startHourTracker = Joins.time
                 AND employeeID = Joins.eid;
-        ELSE
+        ELSIF isEmployeeBooker = 1 AND isMeetingApproved <> 1
             -- Means employee leaving the meeting is booker, cancel the booking
             -- Hopefully deleting from Sessions cascade down to Joins & Books
-            DELETE FROM Sessions
-            WHERE floor_input = Sessions.floor
-            AND room_input = Sessions.room
-            AND requestedDate = Sessions.date
-            AND startHourTracker = Sessions.time;
+            THEN
+                DELETE FROM Sessions
+                WHERE floor_input = Sessions.floor
+                AND room_input = Sessions.room
+                AND requestedDate = Sessions.date
+                AND startHourTracker = Sessions.time;
+        ELSE
+            RAISE WARNING 'Employee unable to leave meeting or not in this meeting.';
         END IF;
         startHourTracker := startHourTracker + 1;
     END LOOP;
