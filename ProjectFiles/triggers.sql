@@ -419,34 +419,6 @@ CREATE TRIGGER join_meeting_availability
 BEFORE INSERT ON Joins
 FOR EACH ROW EXECUTE FUNCTION join_meeting_availability_func();
 
-/**************************************** unbook_room triggers *****************************************/
-CREATE OR REPLACE FUNCTION unbook_room_check_func() RETURNS TRIGGER AS $$
-DECLARE employeeBookerQuery INT;
-BEGIN
-    -- To make sure that condition to remove booking is met, e.g. employee making the booking, booking exist and booking status
-    -- don't need to check if employee resigned as the booking will already been deleted and can't be found
-    employeeBookerQuery := (
-        SELECT COUNT(*)
-        FROM Books
-        WHERE OLD.floor = Books.floor
-        AND OLD.room = Books.room
-        AND OLD.date = Books.date
-        AND OLD.time = Books.time
-        AND OLD.eid = Books.bookerID
-        AND Books.approve_meeting = 0
-    );
-    IF employeeBookerQuery <> 1
-        THEN RETURN NULL;
-    ELSE
-        RETURN OLD;
-    END IF;
-END;
-$$ LANGUAGE plpgsql;
-
-CREATE TRIGGER unbook_room_check
-BEFORE DELETE ON Sessions
-FOR EACH ROW EXECUTE FUNCTION unbook_room_check_func();
-
 
 /*************************************** declare_health triggers **************************************/
 CREATE OR REPLACE FUNCTION declare_health_check_func() RETURNS TRIGGER AS $$
