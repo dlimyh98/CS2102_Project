@@ -28,23 +28,23 @@ $$ LANGUAGE plpgsql;
 
 
 CREATE OR REPLACE PROCEDURE add_room
-(IN floor_input INT, IN room_input INT, IN rname_input TEXT, IN roomCapacity_input INT, IN employeeID INT, IN did_input INT)
+(IN floor_input INT, IN room_input INT, IN rname_input TEXT, IN roomCapacity_input INT, IN employeeID INT)
 AS $$
 DECLARE employeeManagerQuery INT;
-DECLARE employeeDepartmentQuery INT;
 DECLARE isEmployeeResigned BOOLEAN;
+DECLARE room_did INT;
 BEGIN
+    room_did := (
+        SELECT did
+        FROM worksIn
+        WHERE worksIn.eid = employeeID
+    );
+
     -- Checks if employee is a manager
     employeeManagerQuery := (
         SELECT COUNT(*)
         FROM Manager 
         WHERE (managerID = employeeID)
-    );
-    -- Checks if employee is from the correct department
-    employeeDepartmentQuery := (
-        SELECT COUNT(*)
-        FROM worksIn
-        WHERE (eid = employeeID AND did = did_input)
     );
     -- Checks if employee is resigned
     isEmployeeResigned := (
@@ -56,16 +56,13 @@ BEGIN
     IF employeeManagerQuery <> 1
         THEN RAISE EXCEPTION 'Employee is not authorized to make a change in room capacity.';
         RETURN;
-    ELSIF employeeDepartmentQuery = 0
-        THEN RAISE EXCEPTION 'Manager does not belong to same department as Meeting Room.';
-        RETURN;
     ELSIF isEmployeeResigned = TRUE
         THEN RAISE EXCEPTION 'Employee has resigned, is not able to make a booking.';
         RETURN;
     END IF;
 
     INSERT INTO meetingRooms VALUES (room_input, floor_input, rname_input);
-    INSERT INTO locatedIn VALUES (room_input, floor_input, did_input);
+    INSERT INTO locatedIn VALUES (room_input, floor_input, room_did);
     -- Insert room capacity in Updates with the date the room was added 
     INSERT INTO Updates VALUES (employeeID, CURRENT_DATE, roomCapacity_input, room_input, floor_input);
 END;
@@ -133,7 +130,7 @@ BEGIN
         );
 
         -- check Session availability first, it is easier
-        INSERT INTO Sessions VALUES (roomNumber, floornumber, requestedDate, startHourTracker);
+        INSERT INTO Sessions VALUES (roomNumber, floorNumber, requestedDate, startHourTracker);
         GET DIAGNOSTICS sessionsInserted := ROW_COUNT;
 
         IF sessionsInserted = 1
@@ -432,7 +429,7 @@ CREATE OR REPLACE FUNCTION view_booking_report
 RETURNS TABLE (floorNumber INTEGER, roomNumber INTEGER, dateBooked DATE, startHour INTEGER, isApproved BOOLEAN) AS $$
 BEGIN
     RETURN QUERY
-    SELECT room, floor, date, time, CASE 
+    SELECT floor, room, date, time, CASE 
         WHEN approveStatus = 0 THEN FALSE
         WHEN approveStatus = 1 THEN FALSE
         WHEN approveStatus = 2 THEN TRUE

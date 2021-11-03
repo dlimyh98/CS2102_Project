@@ -48,16 +48,16 @@ CALL add_employee('Alvaro Daniels', 'Senior', 9, 91029514, NULL, NULL);
 DELETE FROM meetingRooms;
 DELETE FROM locatedIn;
 DELETE FROM Updates;
-CALL add_room(1, 1, 'Noggin Chamber', 5, 6, 2);
-CALL add_room(1, 2, 'Cranium Focus', 7, 8, 3);
-CALL add_room(1, 3, 'Ideation Zone', 7, 8, 3);
-CALL add_room(2, 1, 'Team Territory', 10, 9, 3);
-CALL add_room(2, 2, 'Creative Arena', 5, 18, 9);
-CALL add_room(2, 3, 'Inspiration Station', 6, 14, 6);
-CALL add_room(3, 1, 'Learning Loft', 11, 14, 6);
-CALL add_room(3, 2, 'Crown Down', 5, 6, 2);
-CALL add_room(3, 3, 'Alpha Mind', 5, 6, 2);
-CALL add_room(4, 1, 'Discussion Hub', 5, 8, 3);
+CALL add_room(1, 1, 'Noggin Chamber', 5, 6);
+CALL add_room(1, 2, 'Cranium Focus', 7, 8);
+CALL add_room(1, 3, 'Ideation Zone', 7, 8);
+CALL add_room(2, 1, 'Team Territory', 10, 9);
+CALL add_room(2, 2, 'Creative Arena', 5, 18);
+CALL add_room(2, 3, 'Inspiration Station', 6, 14);
+CALL add_room(3, 1, 'Learning Loft', 11, 14);
+CALL add_room(3, 2, 'Crown Down', 5, 6);
+CALL add_room(3, 3, 'Alpha Mind', 5, 6);
+CALL add_room(4, 1, 'Discussion Hub', 5, 8);
 
 DELETE FROM Sessions;
 CALL book_room(1, 1, '2022-10-29', 0, 3, 5);
@@ -88,3 +88,36 @@ CALL approve_meeting (3, 1, '2022-10-29', 18, 20, 14);
 CALL approve_meeting (3, 1, '2022-10-30', 4, 9, 14);
 CALL approve_meeting (3, 3, '2022-10-29', 19, 21, 6);
 CALL approve_meeting (4, 1, '2022-10-29', 14, 16, 8);
+
+DELETE FROM healthDeclaration;
+CALL declare_health(1, '2022-10-24', 36.0);
+CALL declare_health(1, '2022-10-25', 37.1);
+CALL declare_health(1, '2022-10-26', 36.2);
+CALL declare_health(1, '2022-10-27', 36.7);
+CALL declare_health(1, '2022-10-28', 37.0);
+CALL declare_health(1, '2022-10-29', 36.6);
+CALL declare_health(1, '2022-10-30', 36.9);
+CALL declare_health(1, '2022-10-31', 36.8);
+CALL declare_health(1, '2022-11-01', 36.3);
+CALL declare_health(1, '2022-11-02', 36.5);
+
+CALL declare_health(2, '2022-10-24', 36.3);
+CALL declare_health(2, '2022-10-25', 37.2);
+CALL declare_health(2, '2022-10-26', 36.5);
+CALL declare_health(2, '2022-10-27', 36.6);
+CALL declare_health(2, '2022-10-28', 37.0);
+CALL declare_health(2, '2022-10-29', 36.2);
+CALL declare_health(2, '2022-10-30', 36.4);
+
+CALL declare_health(3, '2022-10-24', 36.2);
+CALL declare_health(3, '2022-10-25', 36.3);
+CALL declare_health(3, '2022-10-26', 36.1);
+
+CALL declare_health(4, '2022-10-24', 36.7);
+CALL declare_health(4, '2022-10-25', 37.3);
+CALL declare_health(4, '2022-10-26', 36.6);
+CALL declare_health(4, '2022-10-27', 36.8);
+CALL declare_health(4, '2022-10-28', 37.4);
+CALL declare_health(4, '2022-10-29', 36.9);
+
+
