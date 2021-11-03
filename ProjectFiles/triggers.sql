@@ -381,7 +381,7 @@ BEGIN
             AND Joins.date = NEW.date
             AND Joins.time = NEW.time
         );
-    isMeetingApproved := (
+    isMeetingApproved := ( -- checks if meeting exists and if it is approved or not
             SELECT COUNT(*)
             FROM Approves
             WHERE NEW.floor = Approves.floor
@@ -409,7 +409,7 @@ BEGIN
     IF employeeInMeetingQuery <> 1 AND isMeetingApproved <> 1 AND participantCount < capacityCount
         THEN RETURN NEW;
     ELSE
-        RAISE EXCEPTION 'Employee is not allowed to join the meeting';
+        RAISE WARNING 'Employee is not allowed to join the meeting';
         RETURN NULL;
     END IF;
 END;
