@@ -192,35 +192,48 @@ BEGIN
     DELETE FROM Joins
     WHERE eid = OLD.eid AND date > NEW.resignedDate;
 
-    -- Delete corresponding booking requests made by Employee
-    DELETE FROM Books
-    WHERE bookerID = OLD.eid AND date > NEW.resignedDate;
+    -- Find out all FUTURE Sessions that the Employee booked
+    CREATE TEMP TABLE employeeBookedMeetings ON COMMIT DROP AS (
+        SELECT room, floor, date, time
+        FROM Books
+        WHERE Books.bookerID = OLD.eid AND Books.date > NEW.resignedDate
+    );  
 
-    -- Delete corresponding Approve records done by Employee
-    -- Update corresponding Bookings to isApprove = 0 (pending), DO NOT DELETE BOOKINGS
-    CREATE TEMP TABLE approvedBookingsToDelete ON COMMIT DROP AS (
+    -- Find out all FUTURE Approvals that the Employee made
+    CREATE TEMP TABLE approvedBookingsToReset ON COMMIT DROP AS (
         SELECT room, floor, date, time
         FROM Approves 
         WHERE managerID = OLD.eid AND date > NEW.resignedDate
-    );
+    );  
 
+    -- Removes all FUTURE Sessions that resignedEmployee made
+    -- Removes all FUTURE Bookings that resignedEmployee made (cascaded down)
+    -- Removes all Approvals that reference FUTURE Bookings that the resignedEmployee made (cascaded down)
+    DELETE FROM Sessions
+    USING employeeBookedMeetings
+    WHERE Sessions.room = employeeBookedMeetings.room
+    AND Sessions.floor = employeeBookedMeetings.floor
+    AND Sessions.date = employeeBookedMeetings.date
+    AND Sessions.time = employeeBookedMeetings.time;
+
+    -- Delete all FUTURE Approvals done by resignedEmployee
     DELETE FROM Approves
     WHERE managerID = OLD.eid AND date > NEW.resignedDate;
 
+    -- Whatever Bookings the resigned Employee approved, is now reset back to NOT APPROVED in Books table
+    -- Update corresponding FUTURE approved Bookings to isApprove = 0 (pending), DO NOT DELETE BOOKINGS
     UPDATE Books
     SET approveStatus = 0
-    FROM approvedBookingsToDelete
+    FROM approvedBookingsToReset
     WHERE (
-        Books.room = approvedBookingsToDelete.room AND
-        Books.floor = approvedBookingsToDelete.floor AND
-        Books.date = approvedBookingsToDelete.date AND
-        Books.time = approvedBookingsToDelete.time
+        Books.room = approvedBookingsToReset.room AND
+        Books.floor = approvedBookingsToReset.floor AND
+        Books.date = approvedBookingsToReset.date AND
+        Books.time = approvedBookingsToReset.time
     );
-
     RETURN NEW;
 END;
 $$ LANGUAGE plpgsql;
-
 
 CREATE TRIGGER employee_resign
 BEFORE UPDATE ON Employees
