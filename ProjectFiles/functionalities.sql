@@ -260,7 +260,7 @@ $$ LANGUAGE plpgsql;
 
 CREATE OR REPLACE FUNCTION search_room
 (IN capacity INT, IN requestedDate DATE, IN startHour INT, IN endHour INT)
-RETURNS TABLE(floor INT, room INT, departmentID INT, room_capacity INT)
+RETURNS TABLE(floor INT, room INT, departmentID INT, room_capacity INT, availableTime INT)
 AS $$
 BEGIN
     CREATE TEMP TABLE searchDate(date DATE);
@@ -281,30 +281,34 @@ BEGIN
     );
     CREATE TEMP TABLE availableSlots ON COMMIT DROP AS(
         SELECT * FROM allSlots
+        WHERE allSlots.time >= startHour
+        AND allSlots.time < endHour
         EXCEPT
         SELECT * FROM bookedSlots
     );
     CREATE TEMP TABLE latestCapacityUpdate ON COMMIT DROP AS(
-        SELECT Updates.room, Updates.floor, MAX(Updates.date)
+        SELECT Updates.room, Updates.floor, MAX(Updates.date) AS date
         FROM Updates
         WHERE requestedDate >= Updates.date
         GROUP BY Updates.room, Updates.floor
     );
     CREATE TEMP TABLE correctLatestCapacity ON COMMIT DROP AS(
         SELECT Updates.room, Updates.floor, Updates.date, Updates.newCap
-        FROM Updates, latestCapacity
-        WHERE Updates.room = latestCapacity.room
-        AND Updates.floor = latestCapacity.floor
-        AND Updates.date = latestCapacity.date
+        FROM Updates, latestCapacityUpdate
+        WHERE Updates.room = latestCapacityUpdate.room
+        AND Updates.floor = latestCapacityUpdate.floor
+        AND Updates.date = latestCapacityUpdate.date
     );
 
     RETURN QUERY
-    SELECT correctLatestCapacity.floor, correctLatestCapacity.room, locatedIn.departmentID, correctLatestCapacity.newCap AS room_capacity
+    SELECT correctLatestCapacity.floor, correctLatestCapacity.room, locatedIn.did, correctLatestCapacity.newCap AS room_capacity, availableSlots.time
     FROM availableSlots, locatedIn, correctLatestCapacity
     WHERE availableSlots.room = locatedIn.room
     AND availableSlots.floor = locatedIn.floor
     AND availableSlots.room = correctLatestCapacity.room
     AND availableSlots.floor = correctLatestCapacity.floor
+    AND correctLatestCapacity.newCap <= capacity
+    ORDER BY correctLatestCapacity.newCap ASC, correctLatestCapacity.floor ASC, correctLatestCapacity.room ASC, availableSlots.time ASC
     ;
 END;
 $$ LANGUAGE plpgsql;
