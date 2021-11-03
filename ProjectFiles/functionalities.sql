@@ -360,7 +360,7 @@ BEGIN
         AND employeeInMeetings.floor = Approves.floor
         AND employeeInMeetings.date = Approves.date
         AND employeeInMeetings.time = Approves.time
-        AND startDate > employeeInMeetings.date
+        AND Approves.date >= startDate
         ORDER BY Approves.date ASC, Approves.time ASC
     ;   
 END;
