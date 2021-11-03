@@ -383,11 +383,12 @@ BEGIN
         );
     isMeetingApproved := ( -- checks if meeting exists and if it is approved or not
             SELECT COUNT(*)
-            FROM Approves
-            WHERE NEW.floor = Approves.floor
-            AND NEW.room = Approves.room
-            AND NEW.date = Approves.date
-            AND NEW.time = Approves.time
+            FROM Books
+            WHERE NEW.floor = Books.floor
+            AND NEW.room = Books.room
+            AND NEW.date = Books.date
+            AND NEW.time = Books.time
+            AND Books.approveStatus = 2
         );
     participantCount := (
             SELECT COUNT(*)
