@@ -522,26 +522,37 @@ AS $$
 DECLARE startHourTracker INT := startHour;
 DECLARE isEmployeeBooker INT;
 DECLARE isMeetingApproved INT;
+DECLARE isEmployeeInMeeting INT;
 BEGIN
     WHILE startHourTracker < endHour LOOP
         isEmployeeBooker := (
-        SELECT COUNT(*)
-        FROM Books
-        WHERE Books.bookerID = employeeID
-        AND Books.floor = floor_input
-        AND Books.room = room_input
-        AND Books.date = requestedDate
-        AND Books.time = startHourTracker
+            SELECT COUNT(*)
+            FROM Books
+            WHERE Books.bookerID = employeeID
+            AND Books.floor = floor_input
+            AND Books.room = room_input
+            AND Books.date = requestedDate
+            AND Books.time = startHourTracker
         );
         isMeetingApproved := (
-        SELECT COUNT(*)
-        FROM Approves
-        WHERE Approves.room = room_input
-        AND Approves.floor = floor_input
-        AND Approves.date = requestedDate
-        AND Approves.time = startHourTracker
+            SELECT COUNT(*)
+            FROM Approves
+            WHERE Approves.room = room_input
+            AND Approves.floor = floor_input
+            AND Approves.date = requestedDate
+            AND Approves.time = startHourTracker
         );
-        IF isEmployeeBooker <> 1 AND isMeetingApproved <> 1
+        isEmployeeInMeeting := (
+            SELECT COUNT(*)
+            FROM Joins
+            WHERE Joins.room = room_input
+            AND Joins.floor = floor_input
+            AND Joins.date = requestedDate
+            AND Joins.time = startHourTracker
+            AND Joins.eid = employeeID
+        );
+        -- Don't need check for resigned as it should have been removed already
+        IF isEmployeeBooker <> 1 AND isMeetingApproved <> 1 AND isEmployeeInMeeting = 1
             THEN
                 DELETE FROM Joins
                 WHERE floor_input = Joins.floor
@@ -549,14 +560,17 @@ BEGIN
                 AND requestedDate = Joins.date
                 AND startHourTracker = Joins.time
                 AND employeeID = Joins.eid;
-        ELSE
+        ELSIF isEmployeeBooker = 1 AND isMeetingApproved <> 1
             -- Means employee leaving the meeting is booker, cancel the booking
             -- Hopefully deleting from Sessions cascade down to Joins & Books
-            DELETE FROM Sessions
-            WHERE floor_input = Sessions.floor
-            AND room_input = Sessions.room
-            AND requestedDate = Sessions.date
-            AND startHourTracker = Sessions.time;
+            THEN
+                DELETE FROM Sessions
+                WHERE floor_input = Sessions.floor
+                AND room_input = Sessions.room
+                AND requestedDate = Sessions.date
+                AND startHourTracker = Sessions.time;
+        ELSE
+            RAISE WARNING 'Employee unable to leave meeting or not in this meeting.';
         END IF;
         startHourTracker := startHourTracker + 1;
     END LOOP;
