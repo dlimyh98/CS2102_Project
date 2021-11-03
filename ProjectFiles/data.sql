@@ -59,7 +59,7 @@ CALL add_room(3, 2, 'Crown Down', 5, 6, 2);
 CALL add_room(3, 3, 'Alpha Mind', 5, 6, 2);
 CALL add_room(4, 1, 'Discussion Hub', 5, 8, 3);
 
-DELETE FROM Sessions
+DELETE FROM Sessions;
 CALL book_room(1, 1, '2022-10-29', 0, 3, 5);
 CALL book_room(1, 1, '2022-10-29', 7, 8, 5);
 CALL book_room(1, 2, '2022-10-30', 11, 14, 8);

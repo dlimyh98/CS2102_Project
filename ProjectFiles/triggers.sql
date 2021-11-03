@@ -491,3 +491,30 @@ CREATE TRIGGER declare_health_check
 BEFORE INSERT ON healthDeclaration
 FOR EACH ROW EXECUTE FUNCTION declare_health_check_func();
 
+
+/*************************************** add_room trigger **************************************/
+
+------ ensure Meeting Room has exactly one Department (cannot INSERT into MeetingRooms without locatedIn) -----
+CREATE OR REPLACE FUNCTION check_MeetingRoom_has_Department_func() RETURNS TRIGGER AS $$
+DECLARE departmentQuery INTEGER;
+BEGIN
+    departmentQuery := (
+        SELECT COUNT(*)
+        FROM locatedIn
+        WHERE locatedIn.room = NEW.room AND locatedIn.floor = NEW.floor
+    );
+
+    IF departmentQuery <> 1
+        THEN RAISE EXCEPTION 'Meeting Room has no corresponding Department attached to it, not allowed to add.';
+        RETURN NULL;
+    ELSE
+        RETURN NEW;
+    END IF;
+END;
+$$ LANGUAGE plpgsql;
+
+-- Trigger fires together with check_Employee_ISA (order is indeterminate), but it's ok
+CREATE CONSTRAINT TRIGGER check_MeetingRoom_has_Department
+AFTER INSERT ON MeetingRooms
+DEFERRABLE INITIALLY DEFERRED
+FOR EACH ROW EXECUTE FUNCTION check_MeetingRoom_has_Department_func();
