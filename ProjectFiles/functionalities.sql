@@ -94,7 +94,9 @@ BEGIN
     doesEmployeeHaveFever := (
         SELECT fever
         FROM healthDeclaration
-        WHERE (healthDeclaration.eid = employeeID)
+        WHERE healthDeclaration.eid = employeeID
+        ORDER BY date DESC
+        LIMIT 1
     );
 
     employeeBookerQuery := (
@@ -489,6 +491,8 @@ BEGIN
         SELECT fever
         FROM healthDeclaration
         WHERE healthDeclaration.eid = employeeID
+        ORDER BY date DESC
+        LIMIT 1	
     );
 
     isEmployeeResigned := (
