@@ -477,7 +477,7 @@ BEGIN
         Sessions.date = closeContactBookedMeetingsToBeRemoved.date AND 
         Sessions.time = closeContactBookedMeetingsToBeRemoved.time
     );
-        
+    -- Deletes all future meetings booked by employee with fever    
     DELETE FROM Sessions
     USING bookedMeetingsToBeRemoved
     WHERE  (
