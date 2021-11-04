@@ -54,10 +54,10 @@ BEGIN
     );
 
     IF employeeManagerQuery <> 1
-        THEN RAISE EXCEPTION 'Employee is not authorized to make a change in room capacity.';
+        THEN RAISE WARNING 'Employee is not authorized to add a new room.';
         RETURN;
     ELSIF isEmployeeResigned = TRUE
-        THEN RAISE EXCEPTION 'Employee has resigned, is not able to make a booking.';
+        THEN RAISE WARNING 'Employee has resigned, is not able to make a booking.';
         RETURN;
     END IF;
 
@@ -416,12 +416,12 @@ DECLARE numberOfDays INT := (end_date - start_date) + 1;
 BEGIN
     -- List of employees and the number of days non-compliant
     RETURN QUERY
-    SELECT eid, (COUNT(*)-numberOfDays)
-    FROM healthDeclaration
+    SELECT eid, (numberOfDays-COUNT(*))
+    FROM healthDeclaration 
     WHERE (date >= start_date AND date <= end_date)
     GROUP BY eid
-    HAVING ((COUNT(*)-numberOfDays) > 0)
-    ORDER BY (COUNT(*)-numberOfDays) DESC;
+    HAVING (numberOfDays-COUNT(*)) > 0
+    ORDER BY (numberOfDays-COUNT(*)) DESC;
 END;
 $$ LANGUAGE plpgsql;
 
