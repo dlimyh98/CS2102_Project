@@ -441,7 +441,7 @@ DECLARE startDate DATE := NEW.date;
 DECLARE endDate DATE := NEW.date + 7;
 BEGIN
     IF NEW.fever = FALSE 
-        THEN RETURN NULL;
+        THEN RETURN NEW;
     END IF;
     -- Employees in close contact with employee with fever
     CREATE TEMP TABLE employeesToBeRemoved ON COMMIT DROP AS (
