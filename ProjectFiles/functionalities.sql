@@ -410,18 +410,19 @@ $$ LANGUAGE plpgsql;
 
 CREATE OR REPLACE FUNCTION non_compliance
 (IN start_date DATE, IN end_date DATE)
-RETURNS TABLE (employeeID INT, numberOfDays BIGINT) AS $$
+RETURNS TABLE (employeeID BIGINT, numberOfDays BIGINT) AS $$
 -- Number of days inclusive of start date and end date
 DECLARE numberOfDays INT := (end_date - start_date) + 1;
+DECLARE 
 BEGIN
     -- List of employees and the number of days non-compliant
-    RETURN QUERY
-    SELECT eid, (numberOfDays-COUNT(*))
-    FROM healthDeclaration 
-    WHERE (date >= start_date AND date <= end_date)
-    GROUP BY eid
-    HAVING (numberOfDays-COUNT(*)) > 0
-    ORDER BY (numberOfDays-COUNT(*)) DESC;
+    RETURN QUERY 
+    SELECT Employees.eid, (numberOfDays-COUNT(healthDeclaration.eid))
+    FROM Employees LEFT JOIN healthDeclaration
+    ON Employees.eid = healthDeclaration.eid
+    WHERE (healthDeclaration.date >= start_date AND healthDeclaration.date <= end_date)
+    GROUP BY Employees.eid
+    ORDER BY (numberOfDays-COUNT(healthDeclaration.eid)) DESC;
 END;
 $$ LANGUAGE plpgsql;
 
