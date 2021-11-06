@@ -6,7 +6,7 @@ CREATE TABLE Employees (
     mobilePhoneContact NUMERIC(8) NOT NULL UNIQUE,
     homePhoneContact NUMERIC(8),
     officePhoneContact NUMERIC(8),
-    email TEXT UNIQUE,
+    email TEXT NOT NULL UNIQUE,
     resignedDate DATE DEFAULT '1001-01-01',
     isResigned BOOLEAN DEFAULT FALSE,
     PRIMARY KEY (eid)
