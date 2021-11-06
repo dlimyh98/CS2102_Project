@@ -978,12 +978,13 @@ DECLARE
 BEGIN
     -- List of employees and the number of days non-compliant
     RETURN QUERY 
-    SELECT Employees.eid, (numberOfDays-COUNT(healthDeclaration.eid))
-    FROM Employees LEFT JOIN healthDeclaration
-    ON Employees.eid = healthDeclaration.eid
-    WHERE (healthDeclaration.date >= start_date AND healthDeclaration.date <= end_date)
+    SELECT Employees.eid, (numberOfDays-COUNT(t1.eid))
+    FROM Employees LEFT JOIN (SELECT eid, date 
+                              FROM healthDeclaration
+                              WHERE healthDeclaration.date >= start_date AND healthDeclaration.date <= end_date) AS t1
+    ON Employees.eid = t1.eid
     GROUP BY Employees.eid
-    ORDER BY (numberOfDays-COUNT(healthDeclaration.eid)) DESC;
+    ORDER BY (numberOfDays-COUNT(t1.eid)) DESC;
 END;
 $$ LANGUAGE plpgsql;
 
