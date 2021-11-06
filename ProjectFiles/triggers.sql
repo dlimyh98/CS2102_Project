@@ -522,3 +522,29 @@ CREATE CONSTRAINT TRIGGER check_MeetingRoom_has_Department
 AFTER INSERT ON MeetingRooms
 DEFERRABLE INITIALLY DEFERRED
 FOR EACH ROW EXECUTE FUNCTION check_MeetingRoom_has_Department_func();
+
+
+------ ensure Meeting Room has at least one capacity (cannot INSERT into MeetingRooms without Updates) -----
+CREATE OR REPLACE FUNCTION check_MeetingRoom_has_Capacity_func() RETURNS TRIGGER AS $$
+DECLARE numCapacityRecords INTEGER;
+BEGIN
+    numCapacityRecords := (
+        SELECT COUNT(*)
+        FROM Updates
+        WHERE Updates.room = NEW.room AND Updates.floor = NEW.floor
+    );
+
+    IF numCapacityRecords = 0
+        THEN RAISE EXCEPTION 'Meeting Room has no capacity, not allowed to add.';
+        RETURN NULL;
+    ELSE
+        RETURN NEW;
+    END IF;
+END;
+$$ LANGUAGE plpgsql;
+
+-- Trigger fires together with check_Employee_ISA (order is indeterminate), but it's ok
+CREATE CONSTRAINT TRIGGER check_MeetingRoom_has_Capacity
+AFTER INSERT ON meetingRooms
+DEFERRABLE INITIALLY DEFERRED
+FOR EACH ROW EXECUTE FUNCTION check_MeetingRoom_has_Capacity_func();
