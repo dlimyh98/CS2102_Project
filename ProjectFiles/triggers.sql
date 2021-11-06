@@ -354,7 +354,7 @@ FOR EACH ROW EXECUTE FUNCTION approve_bookings_func();
 /**************************************** change_capacity triggers ****************************************/
 CREATE OR REPLACE FUNCTION change_capacity_remove_bookings_func() RETURNS TRIGGER AS $$
 BEGIN
-    DROP TABLE IF EXISTS meetingsToBeRemoved;
+    
     -- List of future meetings that have lower capacity and needed to be removed
     CREATE TEMP TABLE meetingsToBeRemoved ON COMMIT DROP AS (
         SELECT room, floor, date, time, COUNT(*)
@@ -365,13 +365,13 @@ BEGIN
     );
     -- Delete future meetings that have lower capacity
     DELETE FROM Sessions
-    WHERE CTID IN (SELECT Sessions.CTID
-                    FROM Sessions JOIN meetingsToBeRemoved 
-                    ON (Sessions.room = meetingsToBeRemoved.room AND
-                        Sessions.floor = meetingsToBeRemoved.floor AND 
-                        Sessions.date = meetingsToBeRemoved.date AND 
-                        Sessions.time = meetingsToBeRemoved.time)
-                    );
+    USING meetingsToBeRemoved
+    WHERE (
+        Sessions.room = meetingsToBeRemoved.room AND
+        Sessions.floor = meetingsToBeRemoved.floor AND 
+        Sessions.date = meetingsToBeRemoved.date AND 
+        Sessions.time = meetingsToBeRemoved.time
+    );
     RETURN NEW;
     
 END;
@@ -453,6 +453,13 @@ BEGIN
         FROM Books
         WHERE bookerID = NEW.eid AND date >= startDate
     );
+    -- Meetings booked by close contact employees in the next 7 days
+    CREATE TEMP TABLE closeContactBookedMeetingsToBeRemoved ON COMMIT DROP AS (
+        SELECT room, floor, date, time
+        FROM Books JOIN employeesToBeRemoved
+        ON Books.bookerID = employeesToBeRemoved.employeeID
+        WHERE Books.date >= startDate AND Books.date <= endDate
+    );
     -- Deletes close contact employees from future meetings in the next 7 days
     DELETE FROM Joins
     WHERE eid IN (SELECT employeeID FROM employeesToBeRemoved) AND 
@@ -461,15 +468,25 @@ BEGIN
     -- Deletes employee with fever from all future meeting room bookings
     DELETE FROM Joins
     WHERE eid = NEW.eid AND date >= startDate;
-    -- Deletes all future meetings booked by employee with fever
+    -- Deletes all meetings booked by close contact employees in the next 7 days
     DELETE FROM Sessions
-    WHERE CTID IN (SELECT Sessions.CTID
-                    FROM Sessions JOIN bookedMeetingsToBeRemoved 
-                    ON (Sessions.room = bookedMeetingsToBeRemoved.room AND
-                        Sessions.floor = bookedMeetingsToBeRemoved.floor AND 
-                        Sessions.date = bookedMeetingsToBeRemoved.date AND 
-                        Sessions.time = bookedMeetingsToBeRemoved.time)
-                    );
+    USING closeContactBookedMeetingsToBeRemoved
+    WHERE (
+        Sessions.room = closeContactBookedMeetingsToBeRemoved.room AND
+        Sessions.floor = closeContactBookedMeetingsToBeRemoved.floor AND 
+        Sessions.date = closeContactBookedMeetingsToBeRemoved.date AND 
+        Sessions.time = closeContactBookedMeetingsToBeRemoved.time
+    );
+    -- Deletes all future meetings booked by employee with fever    
+    DELETE FROM Sessions
+    USING bookedMeetingsToBeRemoved
+    WHERE  (
+        Sessions.room = bookedMeetingsToBeRemoved.room AND
+        Sessions.floor = bookedMeetingsToBeRemoved.floor AND 
+        Sessions.date = bookedMeetingsToBeRemoved.date AND 
+        Sessions.time = bookedMeetingsToBeRemoved.time
+    );
+
     RETURN NEW;
 END;
 $$ LANGUAGE plpgsql;
