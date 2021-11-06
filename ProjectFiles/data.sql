@@ -1,5 +1,21 @@
--- DELETE FROM worksIn;
--- DELETE FROM Departments; Not needed if starting from a fresh DB
+-- Wipes all rows from all tables (but still keeps schema intact)
+-- Reset Employee BIG SERIAL to 1
+do
+$$
+declare
+  l_stmt text;
+begin
+  select 'truncate ' || string_agg(format('%I.%I', schemaname, tablename), ',')
+    into l_stmt
+  from pg_tables
+  where schemaname in ('public');
+
+  execute l_stmt;
+end;
+$$;
+ALTER SEQUENCE employees_eid_seq RESTART WITH 1;
+
+
 CALL add_department(0, 'Backend');
 CALL add_department(1, 'Frontend');
 CALL add_department(2, 'HR');
@@ -12,7 +28,6 @@ CALL add_department(8, 'Audit');
 CALL add_department(9, 'Operations');
 
 
-DELETE FROM Employees;
 CALL add_employee('Ong Wei Sheng', 'Junior', 0, 91799746, NULL, NULL);
 CALL add_employee('Jair Bates', 'Senior', 0, 98571827, 63830012, 96307738);
 CALL add_employee('Yael Morrison', 'Junior', 1, 97591342, NULL, 97076933);
@@ -45,9 +60,6 @@ CALL add_employee('Cassius Clay', 'Senior', 9, 99120912, NULL, NULL);
 CALL add_employee('Alvaro Daniels', 'Senior', 9, 91029514, NULL, NULL);
 
 
-DELETE FROM meetingRooms;
-DELETE FROM locatedIn;
-DELETE FROM Updates;
 CALL add_room(1, 1, 'Noggin Chamber', 5, 6);
 CALL add_room(1, 2, 'Cranium Focus', 7, 8);
 CALL add_room(1, 3, 'Ideation Zone', 7, 8);
@@ -59,7 +71,6 @@ CALL add_room(3, 2, 'Crown Down', 5, 6);
 CALL add_room(3, 3, 'Alpha Mind', 5, 6);
 CALL add_room(4, 1, 'Discussion Hub', 5, 8);
 
-DELETE FROM Sessions;
 CALL book_room(1, 1, '2022-10-29', 0, 3, 5);
 CALL book_room(1, 1, '2022-10-29', 7, 8, 5);
 CALL book_room(1, 2, '2022-10-30', 11, 14, 8);
@@ -89,7 +100,6 @@ CALL approve_meeting (3, 1, '2022-10-30', 4, 9, 14);
 CALL approve_meeting (3, 3, '2022-10-29', 19, 21, 6);
 CALL approve_meeting (4, 1, '2022-10-29', 14, 16, 8);
 
-DELETE FROM healthDeclaration;
 CALL declare_health(1, '2022-10-24', 36.0);
 CALL declare_health(1, '2022-10-25', 37.1);
 CALL declare_health(1, '2022-10-26', 36.2);
@@ -119,5 +129,3 @@ CALL declare_health(4, '2022-10-26', 36.6);
 CALL declare_health(4, '2022-10-27', 36.8);
 CALL declare_health(4, '2022-10-28', 37.4);
 CALL declare_health(4, '2022-10-29', 36.9);
-
-
