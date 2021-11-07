@@ -1,4 +1,4 @@
-CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
+DROP EXTENSION IF EXISTS "uuid-ossp";
 DROP TRIGGER IF EXISTS unique_email ON Employees CASCADE;
 DROP TRIGGER IF EXISTS check_Employee_has_Department ON Employees CASCADE;
 DROP TRIGGER IF EXISTS check_Employee_ISA_covering ON Employees CASCADE;
@@ -69,6 +69,7 @@ DROP FUNCTION IF EXISTS view_future_meeting CASCADE;
 DROP FUNCTION IF EXISTS non_compliance CASCADE;
 DROP FUNCTION IF EXISTS view_booking_report CASCADE;
 
+CREATE EXTENSION "uuid-ossp";
 
 CREATE TABLE Employees (
     eid BIGSERIAL,

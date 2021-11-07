@@ -262,6 +262,9 @@ CREATE OR REPLACE FUNCTION search_room
 RETURNS TABLE(floor INT, room INT, departmentID INT, room_capacity INT, availableTime INT)
 AS $$
 BEGIN
+    DROP TABLE IF EXISTS searchDate;
+    DROP TABLE IF EXISTS timeSlots;
+    
     CREATE TEMP TABLE searchDate(date DATE);
     INSERT INTO searchDate VALUES(requestedDate);
     CREATE TEMP TABLE timeslots(time INT);
