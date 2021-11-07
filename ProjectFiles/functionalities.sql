@@ -418,8 +418,12 @@ RETURNS TABLE (employeeID BIGINT, numberOfDays BIGINT) AS $$
 DECLARE numberOfDays INT := (end_date - start_date) + 1;
 DECLARE 
 BEGIN
+    IF numberOfDays < 1
+        THEN RAISE EXCEPTION 'Start date needs to be before end date.';
+        RETURN;
+    END IF;
     -- List of employees and the number of days non-compliant
-    RETURN QUERY 
+    RETURN QUERY
     SELECT Employees.eid, (numberOfDays-COUNT(t1.eid))
     FROM Employees LEFT JOIN (SELECT eid, date 
                               FROM healthDeclaration
@@ -427,6 +431,7 @@ BEGIN
     ON Employees.eid = t1.eid
     GROUP BY Employees.eid
     ORDER BY (numberOfDays-COUNT(t1.eid)) DESC;
+    ORDER BY Employees.eid ASC;
 END;
 $$ LANGUAGE plpgsql;
 
