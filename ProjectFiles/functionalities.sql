@@ -430,8 +430,7 @@ BEGIN
                               WHERE healthDeclaration.date >= start_date AND healthDeclaration.date <= end_date) AS t1
     ON Employees.eid = t1.eid
     GROUP BY Employees.eid
-    ORDER BY (numberOfDays-COUNT(t1.eid)) DESC;
-    ORDER BY Employees.eid ASC;
+    ORDER BY (numberOfDays-COUNT(t1.eid)) DESC, Employees.eid ASC;
 END;
 $$ LANGUAGE plpgsql;
 
